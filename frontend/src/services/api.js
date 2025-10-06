@@ -96,6 +96,10 @@ class ApiService {
     return this.get('/api/simulation/vehicles/active')
   }
 
+  async getFinishedVehicles() {
+    return this.get('/api/simulation/vehicles/finished')
+  }
+
   async startSimulation() {
     return this.post('/api/simulation/start')
   }
@@ -149,6 +153,94 @@ class ApiService {
   // Network visualization API methods
   async getNetworkData() {
     return this.get('/api/network/data')
+  }
+
+  // Route calculation API methods
+  async calculateRouteByEdges(startEdge, endEdge) {
+    return this.post('/api/simulation/calculate-route-by-edges', {
+      start_edge: startEdge,
+      end_edge: endEdge
+    })
+  }
+
+  async startJourney(startEdge, endEdge, routeEdges) {
+    console.log('🚀 API: Starting journey with:', {
+      start_edge: startEdge,
+      end_edge: endEdge,
+      route_edges: routeEdges,
+      route_edges_type: typeof routeEdges,
+      route_edges_is_array: Array.isArray(routeEdges)
+    })
+    
+    return this.post('/api/simulation/start-journey', {
+      start_edge: startEdge,
+      end_edge: endEdge,
+      route_edges: routeEdges
+    })
+  }
+
+  async startJourneyDebug(startEdge, endEdge, routeEdges) {
+    console.log('🔍 DEBUG API: Testing debug endpoint with:', {
+      start_edge: startEdge,
+      end_edge: endEdge,
+      route_edges: routeEdges,
+      route_edges_type: typeof routeEdges,
+      route_edges_is_array: Array.isArray(routeEdges)
+    })
+    
+    return this.post('/api/simulation/start-journey-debug', {
+      start_edge: startEdge,
+      end_edge: endEdge,
+      route_edges: routeEdges
+    })
+  }
+
+  async startJourneyRaw(startEdge, endEdge, routeEdges) {
+    console.log('🔍 RAW API: Testing raw endpoint with:', {
+      start_edge: startEdge,
+      end_edge: endEdge,
+      route_edges: routeEdges,
+      route_edges_type: typeof routeEdges,
+      route_edges_is_array: Array.isArray(routeEdges)
+    })
+    
+    return this.post('/api/simulation/start-journey-raw', {
+      start_edge: startEdge,
+      end_edge: endEdge,
+      route_edges: routeEdges
+    })
+  }
+
+  async startJourneyValidation(startEdge, endEdge, routeEdges) {
+    console.log('🔍 VALIDATION API: Testing validation endpoint with:', {
+      start_edge: startEdge,
+      end_edge: endEdge,
+      route_edges: routeEdges,
+      route_edges_type: typeof routeEdges,
+      route_edges_is_array: Array.isArray(routeEdges)
+    })
+    
+    return this.post('/api/simulation/start-journey-validation', {
+      start_edge: startEdge,
+      end_edge: endEdge,
+      route_edges: routeEdges
+    })
+  }
+
+  async startJourneyManual(startEdge, endEdge, routeEdges) {
+    console.log('🔍 MANUAL API: Testing manual endpoint with:', {
+      start_edge: startEdge,
+      end_edge: endEdge,
+      route_edges: routeEdges,
+      route_edges_type: typeof routeEdges,
+      route_edges_is_array: Array.isArray(routeEdges)
+    })
+    
+    return this.post('/api/simulation/start-journey-manual', {
+      start_edge: startEdge,
+      end_edge: endEdge,
+      route_edges: routeEdges
+    })
   }
 }
 

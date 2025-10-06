@@ -19,8 +19,8 @@ RUN apt-get update && apt-get install -y sumo sumo-tools && \
     rm -rf /var/lib/apt/lists/*
 
 # Add SUMO to PATH
-ENV PATH="/usr/local/share/sumo/bin:${PATH}"
-ENV SUMO_HOME="/usr/local/share/sumo"
+ENV PATH="/usr/share/sumo/bin:${PATH}"
+ENV SUMO_HOME="/usr/share/sumo"
 
 # Copy requirements and install Python packages
 COPY requirements.txt .

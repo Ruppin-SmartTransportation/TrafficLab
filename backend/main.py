@@ -1,11 +1,16 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from typing import List, Dict
 import os
 import time
 import json
 
 from services.sumo_service import SUMOSimulation
+
+class RouteRequest(BaseModel):
+    start_edge: str
+    end_edge: str
 
 app = FastAPI(title="SmartTransportation Lab API", version="1.0.0")
 
@@ -206,6 +211,15 @@ async def get_simulation_results(limit: int = 10):
     # Return empty results since we don't have database
     return {"results": []}
 
+@app.get("/api/simulation/vehicles/finished")
+async def get_finished_vehicles():
+    """Get finished user-defined vehicles"""
+    try:
+        finished_vehicles = sumo_simulation.get_finished_vehicles()
+        return {"finished_vehicles": finished_vehicles}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/simulation/statistics")
 async def get_simulation_statistics():
     """Get simulation statistics"""
@@ -282,15 +296,160 @@ async def calculate_route(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/simulation/calculate-route-by-edges")
-async def calculate_route_by_edges(
-    start_edge: str,
-    end_edge: str
-):
+async def calculate_route_by_edges(request: RouteRequest):
     """Calculate route between two edges using SUMO"""
     try:
-        route_data = sumo_simulation.calculate_route_by_edges(start_edge, end_edge)
+        print(f"🛣️ API: Calculating route from {request.start_edge} to {request.end_edge}")
+        route_data = sumo_simulation.calculate_route_by_edges(request.start_edge, request.end_edge)
+        print(f"✅ API: Route calculation result: {route_data}")
         return route_data
     except Exception as e:
+        print(f"❌ API: Route calculation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class JourneyRequest(BaseModel):
+    start_edge: str
+    end_edge: str
+    route_edges: List[str]
+    
+    class Config:
+        # Allow extra fields
+        extra = "allow"
+
+@app.post("/api/simulation/start-journey")
+async def start_journey(request: JourneyRequest):
+    """Add a vehicle to the simulation for the calculated journey"""
+    try:
+        print(f"🚗 API: Starting journey from {request.start_edge} to {request.end_edge}")
+        print(f"🛣️ API: Route edges: {request.route_edges}")
+        print(f"🔍 API: Route edges type: {type(request.route_edges)}")
+        print(f"🔍 API: Route edges length: {len(request.route_edges) if request.route_edges else 'None'}")
+        
+        # Add vehicle to simulation
+        vehicle_id = sumo_simulation.add_journey_vehicle(
+            request.start_edge, 
+            request.end_edge, 
+            request.route_edges
+        )
+        
+        print(f"✅ API: Vehicle {vehicle_id} added to simulation")
+        return {"vehicle_id": vehicle_id, "status": "started"}
+    except Exception as e:
+        print(f"❌ API: Journey start error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/simulation/start-journey-manual")
+async def start_journey_manual(request: dict):
+    """Manual endpoint to test Pydantic validation manually"""
+    try:
+        print(f"🔍 MANUAL: Raw request: {request}")
+        print(f"🔍 MANUAL: Request type: {type(request)}")
+        
+        # Try to create the Pydantic model manually
+        try:
+            journey_request = JourneyRequest(**request)
+            print(f"✅ MANUAL: Pydantic model created successfully")
+            print(f"🔍 MANUAL: start_edge: {journey_request.start_edge}")
+            print(f"🔍 MANUAL: end_edge: {journey_request.end_edge}")
+            print(f"🔍 MANUAL: route_edges: {journey_request.route_edges}")
+            print(f"🔍 MANUAL: route_edges type: {type(journey_request.route_edges)}")
+            
+            # Add vehicle to simulation
+            vehicle_id = sumo_simulation.add_journey_vehicle(
+                journey_request.start_edge, 
+                journey_request.end_edge, 
+                journey_request.route_edges
+            )
+            
+            print(f"✅ MANUAL: Vehicle {vehicle_id} added to simulation")
+            return {"vehicle_id": vehicle_id, "status": "started"}
+            
+        except Exception as validation_error:
+            print(f"❌ MANUAL: Pydantic validation failed: {validation_error}")
+            print(f"❌ MANUAL: Error type: {type(validation_error)}")
+            return {"status": "validation_failed", "error": str(validation_error)}
+            
+    except Exception as e:
+        print(f"❌ MANUAL: General error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/simulation/start-journey-validation")
+async def start_journey_validation(request: dict):
+    """Debug endpoint to test Pydantic validation"""
+    try:
+        print(f"🔍 VALIDATION: Raw request: {request}")
+        print(f"🔍 VALIDATION: Request type: {type(request)}")
+        
+        # Try to create the Pydantic model
+        try:
+            journey_request = JourneyRequest(**request)
+            print(f"✅ VALIDATION: Pydantic model created successfully")
+            print(f"🔍 VALIDATION: start_edge: {journey_request.start_edge}")
+            print(f"🔍 VALIDATION: end_edge: {journey_request.end_edge}")
+            print(f"🔍 VALIDATION: route_edges: {journey_request.route_edges}")
+            print(f"🔍 VALIDATION: route_edges type: {type(journey_request.route_edges)}")
+            return {"status": "validation_success", "data": journey_request.dict()}
+        except Exception as validation_error:
+            print(f"❌ VALIDATION: Pydantic validation failed: {validation_error}")
+            print(f"❌ VALIDATION: Error type: {type(validation_error)}")
+            return {"status": "validation_failed", "error": str(validation_error)}
+            
+    except Exception as e:
+        print(f"❌ VALIDATION: General error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/simulation/start-journey-raw")
+async def start_journey_raw(request: dict):
+    """Raw endpoint without Pydantic validation to test data"""
+    try:
+        print(f"🔍 RAW: Starting journey from {request.get('start_edge')} to {request.get('end_edge')}")
+        print(f"🔍 RAW: Route edges: {request.get('route_edges')}")
+        print(f"🔍 RAW: Route edges type: {type(request.get('route_edges'))}")
+        print(f"🔍 RAW: Route edges length: {len(request.get('route_edges')) if request.get('route_edges') else 'None'}")
+        
+        # Validate manually
+        start_edge = request.get('start_edge')
+        end_edge = request.get('end_edge')
+        route_edges = request.get('route_edges')
+        
+        if not start_edge or not isinstance(start_edge, str):
+            raise HTTPException(status_code=422, detail="Invalid start_edge")
+        if not end_edge or not isinstance(end_edge, str):
+            raise HTTPException(status_code=422, detail="Invalid end_edge")
+        if not route_edges or not isinstance(route_edges, list):
+            raise HTTPException(status_code=422, detail="Invalid route_edges")
+        
+        # Add vehicle to simulation
+        vehicle_id = sumo_simulation.add_journey_vehicle(
+            start_edge, 
+            end_edge, 
+            route_edges
+        )
+        
+        print(f"✅ RAW: Vehicle {vehicle_id} added to simulation")
+        return {"vehicle_id": vehicle_id, "status": "started"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ RAW: Journey start error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/simulation/start-journey-debug")
+async def start_journey_debug(request: dict):
+    """Debug endpoint to see raw request data"""
+    try:
+        print(f"🔍 DEBUG: Raw request data: {request}")
+        print(f"🔍 DEBUG: Request type: {type(request)}")
+        print(f"🔍 DEBUG: Request keys: {list(request.keys()) if isinstance(request, dict) else 'Not a dict'}")
+        
+        if 'route_edges' in request:
+            print(f"🔍 DEBUG: Route edges: {request['route_edges']}")
+            print(f"🔍 DEBUG: Route edges type: {type(request['route_edges'])}")
+            print(f"🔍 DEBUG: Route edges is list: {isinstance(request['route_edges'], list)}")
+        
+        return {"debug": "Request received", "data": request}
+    except Exception as e:
+        print(f"❌ DEBUG: Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

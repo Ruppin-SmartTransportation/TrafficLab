@@ -55,6 +55,10 @@ class SUMOSimulation:
         # Trips data for playback
         self.trips_data = {}
         self.max_step = 0
+        
+        # User-defined vehicle tracking
+        self.user_defined_vehicles = {}  # vehicle_id -> {id, path, travel_distance, start_time, end_time}
+        self.finished_vehicles = []  # List of completed vehicles for frontend events
         self.is_playing = False
         
         # Simulation thread
@@ -67,7 +71,7 @@ class SUMOSimulation:
         # Load trips data
         self.load_trips_data()
 
-         # Start TraCI connection
+        # Start TraCI connection
         try:
             traci.start(["sumo", "-c", "sumo/urban_three_zones.sumocfg", "--start"])
             print("✅ TraCI connection established")
@@ -170,10 +174,14 @@ class SUMOSimulation:
                     traci.simulationStep()
                     #read active vehicle from traci and update vehicles_in_route
                 self.vehicles_in_route = set([v["id"] for v in self.get_active_vehicles().get("vehicles", [])])
+                
+                # Check user-defined vehicles for completion
+                self._check_user_defined_vehicles(traci)
+                
                 # Move to next step (with cycling)
                 self.current_step += 1
                 # Small sleep to prevent overwhelming TraCI connection
-                time.sleep(0.1)  # 100ms sleep for stability
+                time.sleep(0.05)  # 100ms sleep for stability
                 
             except Exception as e:
                 print(f"❌ Error in simulation loop: {e}")
@@ -193,6 +201,51 @@ class SUMOSimulation:
         
         # Keep TraCI connection open - only close on server shutdown
         print("🏁 Endless simulation loop ended")
+    
+    def _check_user_defined_vehicles(self, traci):
+        """Check if user-defined vehicles have finished their journey"""
+        vehicles_to_remove = []
+        
+        for vehicle_id, vehicle_data in self.user_defined_vehicles.items():
+            try:
+                # Check if vehicle is still in the simulation
+                if vehicle_id not in self.vehicles_in_route:
+                    # Vehicle has finished its journey
+                    vehicle_data['end_time'] = self.current_step
+                    
+                    # Calculate travel distance (simplified - could be enhanced)
+                    vehicle_data['travel_distance'] = self._calculate_travel_distance(vehicle_data['path'])
+                    
+                    # Add to finished vehicles list for frontend events
+                    self.finished_vehicles.append(vehicle_data.copy())
+                    
+                    # Mark for removal from tracking
+                    vehicles_to_remove.append(vehicle_id)
+                    
+                    print(f"🎯 Vehicle {vehicle_id} finished journey at step {self.current_step}")
+                    print(f"📊 Travel distance: {vehicle_data['travel_distance']:.2f}m")
+                    print(f"⏱️ Journey duration: {vehicle_data['end_time'] - vehicle_data['start_time']} steps")
+                    
+            except Exception as e:
+                print(f"❌ Error checking vehicle {vehicle_id}: {e}")
+        
+        # Remove finished vehicles from tracking
+        for vehicle_id in vehicles_to_remove:
+            del self.user_defined_vehicles[vehicle_id]
+    
+    def _calculate_travel_distance(self, path_edges):
+        """Calculate total travel distance for a path"""
+        total_distance = 0.0
+        for edge_id in path_edges:
+            if edge_id in self.roads and hasattr(self.roads[edge_id], 'length'):
+                total_distance += self.roads[edge_id].length
+        return total_distance
+    
+    def get_finished_vehicles(self):
+        """Get finished user-defined vehicles and clear the list"""
+        finished = self.finished_vehicles.copy()
+        self.finished_vehicles.clear()  # Clear after returning to avoid duplicates
+        return finished
     
     def process_trips_for_step(self, trips):
         """Process trips for the current step - add vehicles to simulation using TraCI"""
@@ -307,8 +360,8 @@ class SUMOSimulation:
         for edge in self.net.getEdges():
             zone_attr = edge.getParam("zone")
             if not zone_attr:
-                continue
-            
+                    continue
+                    
             road_count += 1
             if road_count % 100 == 0:
                 print(f"🛣️  Processed {road_count} roads...")
@@ -383,6 +436,7 @@ class SUMOSimulation:
             # Get the first lane of the edge (all lanes should have similar shape)
             lanes = edge.getLanes()
             if not lanes:
+                print(f"⚠️  No lanes found for edge {edge.getID()}")
                 return []
             
             first_lane = lanes[0]
@@ -391,8 +445,11 @@ class SUMOSimulation:
             # Convert shape points to list of [x, y] coordinates
             shape_points = []
             for point in shape:
-                shape_points.append([point[0], point[1]])
+                shape_points.append([float(point[0]), float(point[1])])
             
+            # Only log if there are issues with shape points
+            if len(shape_points) < 2:
+                print(f"⚠️  Edge {edge.getID()} has insufficient shape points: {len(shape_points)}")
             return shape_points
         except Exception as e:
             print(f"⚠️  Could not get shape points for edge {edge.getID()}: {e}")
@@ -424,16 +481,16 @@ class SUMOSimulation:
         if not self.is_data_loaded():
             print("❌ Cannot start simulation: Data not loaded yet")
             return False
-            
+        
         try:
             self.simulation_running = True
             print("🚀 Simulation started")
             return True
-            
+        
         except Exception as e:
             print(f"Error starting SUMO simulation: {e}")
-            return False
-
+        return False
+    
     def stop_simulation(self):
         """
         Stop the SUMO simulation
@@ -506,7 +563,7 @@ class SUMOSimulation:
                         
                     except Exception as e:
                         print(f"❌ Error getting vehicle {vehicle_id}: {e}")
-                        continue
+                    continue
                 
                 # Return vehicles data
                 return {"vehicles": vehicles_data}
@@ -556,6 +613,18 @@ class SUMOSimulation:
         else:
             min_x = max_x = min_y = max_y = 0
         
+        # Debug: Check for express edges with invalid shape points
+        express_edges_with_issues = []
+        for road in self.roads.values():
+            if hasattr(road, 'shape_points') and road.shape_points:
+                # Check if shape points look like junction IDs instead of coordinates
+                if (isinstance(road.shape_points[0], str) and 
+                    not road.shape_points[0].includes(',')):
+                    express_edges_with_issues.append(road.id)
+        
+        if express_edges_with_issues:
+            print(f"⚠️  Express edges with junction ID shape points: {express_edges_with_issues[:3]}")
+        
         return {
             "junctions": list(self.junctions.values()),
             "edges": list(self.roads.values()),  # Frontend expects "edges" not "roads"
@@ -596,8 +665,8 @@ class SUMOSimulation:
         vehicle = self.get_vehicle(vehicle_id)
         if vehicle:
             return vehicle.speed
-        return 0.0
-
+            return 0.0
+            
     def calculate_route(self, start_coords, end_coords):
         """Calculate route between two points"""
         return {
@@ -607,12 +676,49 @@ class SUMOSimulation:
         }
 
     def calculate_route_by_edges(self, start_edge, end_edge):
-        """Calculate route between two edges"""
-        return {
-            "edges": [start_edge, "edge2", "edge3", end_edge],
-            "distance": 1000.0,
-            "duration": 300.0
-        }
+        """Calculate route between two edges using SUMO routing"""
+        try:
+            print(f"🛣️ Calculating route from {start_edge} to {end_edge}")
+            print(f"🔍 Available roads: {len(self.roads)}")
+            print(f"🔍 Simulation running: {self.simulation_running}")
+            
+            # Validate that both edges exist in our network
+            if start_edge not in self.roads:            
+                print(f"❌ Start edge '{start_edge}' not found in {list(self.roads.keys())[:10]}...")
+                return {
+                    "error": f"Start edge '{start_edge}' not found in network"
+                }
+            if end_edge not in self.roads:
+                print(f"❌ End edge '{end_edge}' not found in {list(self.roads.keys())[:10]}...")
+                return {
+                    "error": f"End edge '{end_edge}' not found in network"
+                }
+            
+            # Use TraCI routing
+            with self.traci_lock:
+                # Try to use TraCI routing
+                route_result = traci.simulation.findRoute(start_edge, end_edge)
+                
+                if route_result and route_result.edges:
+                    edge_list = list(route_result.edges)
+                    distance = route_result.length
+                    
+                    print(f"✅ Route calculated via TraCI: {len(edge_list)} edges, {distance:.1f}m")
+                    return {
+                        "edges": edge_list,
+                        "distance": distance,
+                        "duration": distance / 13.89,  # Assume 50 km/h average speed
+                        "start_edge": start_edge,
+                        "end_edge": end_edge
+                    }
+                else:
+                    print(f"❌ No route found between {start_edge} and {end_edge}")
+                    return {"error": "No route found"}
+                    
+        except Exception as e:
+            print(f"❌ Error in calculate_route_by_edges: {e}")
+            return {"error": f"Route calculation failed: {str(e)}"}
+    
     
     def debug_system_state(self):
         """
@@ -632,3 +738,94 @@ class SUMOSimulation:
         
         print(f"\n🗄️  Database session: Not using database")
         print("="*50)
+    
+    def add_journey_vehicle(self, start_edge, end_edge, route_edges):
+        """Add a vehicle to the simulation for a specific journey"""
+        try:
+            # Generate unique vehicle ID
+            vehicle_id = f"journey_vehicle_{int(time.time() * 1000)}"
+            
+            # Create route from the calculated route edges
+            route_str = " ".join(route_edges)
+            
+            print(f"🚗 Adding journey vehicle {vehicle_id}")
+            print(f"🛣️ Route: {route_str}")
+            print(f"🔍 Start edge: {start_edge}")
+            print(f"🔍 End edge: {end_edge}")
+            print(f"🔍 Route edges: {route_edges}")
+            print(f"🔍 Route edges type: {type(route_edges)}")
+            print(f"🔍 Route edges length: {len(route_edges) if route_edges else 'None'}")
+            print(f"🔍 Available roads: {len(self.roads)}")
+            print(f"🔍 Start edge in roads: {start_edge in self.roads}")
+            if start_edge in self.roads:
+                road = self.roads[start_edge]
+                print(f"🔍 Road object: {type(road)}")
+                print(f"🔍 Road attributes: {dir(road)}")
+                if hasattr(road, 'length'):
+                    print(f"🔍 Road length: {road.length}")
+            
+            # Validate route edges
+            if not route_edges or not isinstance(route_edges, list):
+                raise Exception(f"Invalid route edges: {route_edges}")
+            
+            # Check if all route edges exist in the network
+            for edge_id in route_edges:
+                if edge_id not in self.roads:
+                    print(f"⚠️ Route edge {edge_id} not found in network")
+                    # Don't fail, just warn
+            
+            with self.traci_lock:
+                # Check if TraCI is connected
+                try:
+                    traci.simulation.getMinExpectedNumber()
+                    print(f"✅ TraCI connection is active")
+                except Exception as e:
+                    print(f"❌ TraCI connection error: {e}")
+                    raise Exception(f"TraCI not connected: {e}")
+                
+                # Create route first
+                route_id = f"route_{vehicle_id}_{start_edge}_{end_edge}_{int(time.time() * 1000)}"
+                traci.route.add(routeID=route_id, edges=route_edges)
+
+                # Depart time needs to be in jumps of 30 steps for example if current step is 100, then depart time should be 120
+                current_time = traci.simulation.getTime()
+                depart_time = current_time + 30 - current_time % 30
+                
+                # Depart pos needs to be the center of the road
+                if start_edge in self.roads and hasattr(self.roads[start_edge], 'length'):
+                    depart_pos = self.roads[start_edge].length / 2.2
+                else:
+                    # Fallback: use a default position (middle of edge)
+                    print(f"⚠️ Road {start_edge} not found or no length attribute, using default position")
+                    depart_pos = 0.5  # Middle of the edge
+                
+                # Add vehicle to simulation FIRST
+                traci.vehicle.add(
+                    vehID=vehicle_id,
+                    routeID=route_id,
+                    typeID="user_defined",
+                    depart=depart_time,  # Use current time instead of trip depart time
+                    departPos=depart_pos,
+                    departSpeed=0,
+                    departLane="0"
+                )
+                traci.vehicle.subscribe(vehicle_id, [tc.VAR_ROAD_ID, tc.VAR_POSITION, tc.VAR_SPEED])
+            
+            # Add to tracking
+            self.vehicles_in_route.add(vehicle_id)
+            
+            # Track user-defined vehicle
+            self.user_defined_vehicles[vehicle_id] = {
+                'id': vehicle_id,
+                'path': route_edges,
+                'travel_distance': 0.0,  # Will be updated during simulation
+                'start_time': self.current_step,
+                'end_time': None
+            }
+            
+            print(f"✅ Journey vehicle {vehicle_id} added to simulation and tracking")
+            return vehicle_id
+            
+        except Exception as e:
+            print(f"❌ Error adding journey vehicle: {e}")
+            raise e
