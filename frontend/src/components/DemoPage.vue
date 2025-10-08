@@ -848,6 +848,9 @@
             {{ currentPlotType === 'duration-vs-mae-scatter' ? 'Trip Duration vs MAE Scatter Plot' : 
                currentPlotType === 'distance-vs-mae-scatter' ? 'Trip Distance vs MAE Scatter Plot' : 
                currentPlotType === 'mae-by-time' ? 'MAE by Time of Day' : 
+               currentPlotType === 'duration-histogram-short' ? 'Short Trips - Duration vs MAE Histogram' :
+               currentPlotType === 'duration-histogram-medium' ? 'Medium Trips - Duration vs MAE Histogram' :
+               currentPlotType === 'duration-histogram-long' ? 'Long Trips - Duration vs MAE Histogram' :
                currentPlotData?.title || 'Plot' }}
           </h3>
           <button 
@@ -861,7 +864,7 @@
         </div>
         
         <!-- Plot Content -->
-        <div v-if="currentPlotData && (currentPlotType === 'duration-vs-mae-scatter' || currentPlotType === 'distance-vs-mae-scatter' || currentPlotType === 'mae-by-time')" class="space-y-2">
+        <div v-if="currentPlotData && (currentPlotType === 'duration-vs-mae-scatter' || currentPlotType === 'distance-vs-mae-scatter' || currentPlotType === 'mae-by-time' || currentPlotType === 'duration-histogram-short' || currentPlotType === 'duration-histogram-medium' || currentPlotType === 'duration-histogram-long')" class="space-y-2">
           <!-- Matplotlib Plot Image -->
           <div class="bg-slate-900 rounded-lg p-1">
             <div v-if="plotImage" class="w-full h-[calc(95vh-120px)] flex items-center justify-center">
@@ -869,7 +872,11 @@
                 :src="plotImage" 
                 :alt="currentPlotType === 'duration-vs-mae-scatter' ? 'Trip Duration vs MAE Scatter Plot' : 
                        currentPlotType === 'distance-vs-mae-scatter' ? 'Trip Distance vs MAE Scatter Plot' : 
-                       'MAE by Time of Day Bar Chart'"
+                       currentPlotType === 'mae-by-time' ? 'MAE by Time of Day Bar Chart' :
+                       currentPlotType === 'duration-histogram-short' ? 'Short Trips - Duration vs MAE Histogram' :
+                       currentPlotType === 'duration-histogram-medium' ? 'Medium Trips - Duration vs MAE Histogram' :
+                       currentPlotType === 'duration-histogram-long' ? 'Long Trips - Duration vs MAE Histogram' :
+                       'Plot'"
                 class="max-w-full max-h-full object-contain"
               />
             </div>
@@ -2573,30 +2580,25 @@ export default {
             console.error('Error calling getMaeByTimePlotImage API:', error)
             alert('Error loading plot image. Please try again.')
           }
+        } else if (plotType === 'duration-histogram-short' || plotType === 'duration-histogram-medium' || plotType === 'duration-histogram-long') {
+          try {
+            const category = plotType.split('-')[2] // Extract 'short', 'medium', or 'long'
+            const response = await apiService.getDurationHistogramPlotImage(category)
+            if (response.success) {
+              this.plotImage = response.image
+              this.currentPlotData = { total_points: response.total_points, total_journeys: response.total_journeys }
+              this.showPlotModal = true
+            } else {
+              console.error('Failed to load plot image:', response)
+              alert('Failed to load plot image. Please try again.')
+            }
+          } catch (error) {
+            console.error('Error calling getDurationHistogramPlotImage API:', error)
+            alert('Error loading plot image. Please try again.')
+          }
         } else {
           // For other plot types, show placeholder for now
           const plotConfigs = {
-            'duration-histogram-short': {
-              title: 'Short Trips - Duration vs MAE Histogram',
-              type: 'histogram',
-              binSize: '5 seconds',
-              category: 'short',
-              description: 'Error distribution for short duration trips (< 278s)'
-            },
-            'duration-histogram-medium': {
-              title: 'Medium Trips - Duration vs MAE Histogram',
-              type: 'histogram',
-              binSize: '5 seconds',
-              category: 'medium',
-              description: 'Error distribution for medium duration trips (278-609s)'
-            },
-            'duration-histogram-long': {
-              title: 'Long Trips - Duration vs MAE Histogram',
-              type: 'histogram',
-              binSize: '10 seconds',
-              category: 'long',
-              description: 'Error distribution for long duration trips (> 609s)'
-            },
             'distance-histogram-short': {
               title: 'Short Trips - Distance vs MAE Histogram',
               type: 'histogram',

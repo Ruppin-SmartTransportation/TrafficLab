@@ -294,6 +294,14 @@ class ApiService {
     return this.get('/api/journeys/plot-image/mae-by-time')
   }
 
+  async getDurationHistogramPlotData(category) {
+    return this.get(`/api/journeys/plot-data/duration-histogram/${category}`)
+  }
+
+  async getDurationHistogramPlotImage(category) {
+    return this.get(`/api/journeys/plot-image/duration-histogram/${category}`)
+  }
+
   async seedRandomJourneys() {
     return this.post('/api/admin/seed-data')
   }

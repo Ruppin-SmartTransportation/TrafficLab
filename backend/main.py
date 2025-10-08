@@ -645,6 +645,108 @@ async def get_mae_by_time_plot_image(db: Session = Depends(get_db)):
         print(f"❌ API: Error generating matplotlib plot: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to generate plot: {str(e)}")
 
+@app.get("/api/journeys/plot-data/duration-histogram/{category}")
+async def get_duration_histogram_data(category: str, db: Session = Depends(get_db)):
+    """Get data for Trip Duration vs MAE Histogram"""
+    try:
+        from models.database import get_duration_histogram_plot_data
+        
+        plot_data = get_duration_histogram_plot_data(db, category)
+        
+        return {
+            "success": True,
+            "plot_data": plot_data
+        }
+    except Exception as e:
+        print(f"❌ API: Error getting duration histogram plot data: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get plot data: {str(e)}")
+
+@app.get("/api/journeys/plot-image/duration-histogram/{category}")
+async def get_duration_histogram_plot_image(category: str, db: Session = Depends(get_db)):
+    """Generate matplotlib plot image for Trip Duration vs MAE Histogram"""
+    try:
+        from models.database import get_duration_histogram_plot_data
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend
+        import matplotlib.pyplot as plt
+        import io
+        import base64
+        import numpy as np
+        
+        # Get plot data
+        plot_data = get_duration_histogram_plot_data(db, category)
+        
+        if not plot_data.get('data_points'):
+            return {
+                "success": False,
+                "message": "No data available for plotting"
+            }
+        
+        # Create matplotlib figure
+        plt.style.use('dark_background')
+        fig, ax = plt.subplots(figsize=(12, 8))
+        
+        # Extract data for plotting
+        bin_centers = [point['bin_center'] for point in plot_data['data_points']]
+        counts = [point['count'] for point in plot_data['data_points']]
+        bin_edges = plot_data['bins']
+        
+        # Create histogram
+        bars = ax.bar(bin_centers, counts, 
+                     width=np.diff(bin_edges)[0] * 0.8,  # 80% width for spacing
+                     color='#3b82f6', 
+                     alpha=0.8,
+                     edgecolor='white',
+                     linewidth=0.5)
+        
+        # Set axis labels and title
+        ax.set_xlabel('MAE (seconds)', fontsize=14, color='white')
+        ax.set_ylabel('Frequency', fontsize=14, color='white')
+        ax.set_title(f'Trip Duration vs MAE Histogram - {category.title()}', fontsize=16, color='white', pad=20)
+        
+        # Set x-axis range
+        ax.set_xlim(0, max(bin_centers) * 1.1 if bin_centers else 10)
+        
+        # Set y-axis range
+        max_count = max(counts) if counts else 1
+        ax.set_ylim(0, max_count * 1.1)
+        
+        # Set grid
+        ax.grid(True, alpha=0.3, color='gray', axis='y')
+        ax.set_facecolor('black')
+        
+        # Set tick colors
+        ax.tick_params(colors='white')
+        
+        # Add statistics text
+        total_journeys = plot_data['total_journeys']
+        mae_values = plot_data.get('mae_values', [])
+        if mae_values:
+            mean_mae = np.mean(mae_values)
+            std_mae = np.std(mae_values)
+            ax.text(0.02, 0.98, f'Total Journeys: {total_journeys}\nMean MAE: {mean_mae:.1f}s\nStd MAE: {std_mae:.1f}s', 
+                   transform=ax.transAxes, fontsize=10, color='white',
+                   verticalalignment='top', bbox=dict(boxstyle='round', facecolor='black', alpha=0.8))
+        
+        # Convert to base64 string
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight',
+                   facecolor='black', edgecolor='none')
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.getvalue()).decode()
+        plt.close(fig)
+        
+        return {
+            "success": True,
+            "image": f"data:image/png;base64,{image_base64}",
+            "total_points": len(plot_data['data_points']),
+            "total_journeys": total_journeys
+        }
+        
+    except Exception as e:
+        print(f"❌ API: Error generating matplotlib plot: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate plot: {str(e)}")
+
 @app.post("/api/admin/seed-data")
 async def seed_random_journeys(db: Session = Depends(get_db)):
     """
