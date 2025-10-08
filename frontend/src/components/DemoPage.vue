@@ -478,6 +478,101 @@
                     </div>
                   </div>
                   
+                  <!-- Separating Line -->
+                  <div class="border-t border-slate-600 mb-4"></div>
+                  
+                  <!-- Fourth Section: Visual Analysis -->
+                  <div class="mb-3">
+                    <div class="text-xs text-slate-400 mb-2 font-medium text-center">Visual Analysis</div>
+                    
+                    <!-- First Line: Scatter Plots and Time Analysis -->
+                    <div class="grid grid-cols-3 gap-2 mb-3">
+                      <!-- Trip Duration vs MAE Scatter Plot -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                           @click="openPlotWindow('duration-vs-mae-scatter')">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">Trip Duration vs MAE</div>
+                        <div class="text-xs text-slate-300">Scatter Plot</div>
+                        <div class="text-xs text-slate-500 mt-1">📊</div>
+                      </div>
+                      
+                      <!-- Trip Distance vs MAE Scatter Plot -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                           @click="openPlotWindow('distance-vs-mae-scatter')">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">Trip Distance vs MAE</div>
+                        <div class="text-xs text-slate-300">Scatter Plot</div>
+                        <div class="text-xs text-slate-500 mt-1">📊</div>
+                      </div>
+                      
+                      <!-- MAE by Time of Day -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                           @click="openPlotWindow('mae-by-time')">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">MAE by Time of Day</div>
+                        <div class="text-xs text-slate-300">Bar Chart</div>
+                        <div class="text-xs text-slate-500 mt-1">📊</div>
+                      </div>
+                    </div>
+                    
+                    <!-- Second Line: Trip Duration vs MAE Histograms -->
+                    <div class="mb-2">
+                      <div class="text-xs text-slate-400 mb-2 font-medium text-center">Trip Duration vs MAE Histogram</div>
+                      <div class="grid grid-cols-3 gap-2">
+                        <!-- Short Trips Duration Histogram -->
+                        <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                             @click="openPlotWindow('duration-histogram-short')">
+                          <div class="text-xs text-slate-400 mb-1 font-medium">Short</div>
+                          <div class="text-xs text-slate-300">5s bins</div>
+                          <div class="text-xs text-slate-500 mt-1">📊</div>
+                        </div>
+                        
+                        <!-- Medium Trips Duration Histogram -->
+                        <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                             @click="openPlotWindow('duration-histogram-medium')">
+                          <div class="text-xs text-slate-400 mb-1 font-medium">Medium</div>
+                          <div class="text-xs text-slate-300">5s bins</div>
+                          <div class="text-xs text-slate-500 mt-1">📊</div>
+                        </div>
+                        
+                        <!-- Long Trips Duration Histogram -->
+                        <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                             @click="openPlotWindow('duration-histogram-long')">
+                          <div class="text-xs text-slate-400 mb-1 font-medium">Long</div>
+                          <div class="text-xs text-slate-300">10s bins</div>
+                          <div class="text-xs text-slate-500 mt-1">📊</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Third Line: Trip Distance vs MAE Histograms -->
+                    <div class="mb-3">
+                      <div class="text-xs text-slate-400 mb-2 font-medium text-center">Trip Distance vs MAE Histogram</div>
+                      <div class="grid grid-cols-3 gap-2">
+                        <!-- Short Trips Distance Histogram -->
+                        <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                             @click="openPlotWindow('distance-histogram-short')">
+                          <div class="text-xs text-slate-400 mb-1 font-medium">Short</div>
+                          <div class="text-xs text-slate-300">5s bins</div>
+                          <div class="text-xs text-slate-500 mt-1">📊</div>
+                        </div>
+                        
+                        <!-- Medium Trips Distance Histogram -->
+                        <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                             @click="openPlotWindow('distance-histogram-medium')">
+                          <div class="text-xs text-slate-400 mb-1 font-medium">Medium</div>
+                          <div class="text-xs text-slate-300">5s bins</div>
+                          <div class="text-xs text-slate-500 mt-1">📊</div>
+                        </div>
+                        
+                        <!-- Long Trips Distance Histogram -->
+                        <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                             @click="openPlotWindow('distance-histogram-long')">
+                          <div class="text-xs text-slate-400 mb-1 font-medium">Long</div>
+                          <div class="text-xs text-slate-300">10s bins</div>
+                          <div class="text-xs text-slate-500 mt-1">📊</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <!-- Additional Statistics Placeholder -->
                   <div class="text-center text-slate-400 text-xs py-4">
                     <div class="text-2xl mb-2">📈</div>
@@ -2385,6 +2480,86 @@ export default {
         }
       } catch (error) {
         console.error('Error checking finished vehicles:', error)
+      }
+    },
+    
+    openPlotWindow(plotType) {
+      console.log('📊 Opening plot window for:', plotType)
+      
+      // Create plot window based on type
+      const plotConfigs = {
+        'duration-vs-mae-scatter': {
+          title: 'Trip Duration vs MAE Scatter Plot',
+          type: 'scatter',
+          xAxis: 'Trip Duration (seconds)',
+          yAxis: 'MAE (seconds)',
+          description: 'Shows relationship between trip duration and prediction accuracy'
+        },
+        'distance-vs-mae-scatter': {
+          title: 'Trip Distance vs MAE Scatter Plot',
+          type: 'scatter',
+          xAxis: 'Trip Distance (km)',
+          yAxis: 'MAE (seconds)',
+          description: 'Shows relationship between trip distance and prediction accuracy'
+        },
+        'mae-by-time': {
+          title: 'MAE by Time of Day',
+          type: 'bar',
+          xAxis: 'Hour of Day',
+          yAxis: 'MAE (seconds)',
+          description: 'Shows prediction accuracy across different times of day'
+        },
+        'duration-histogram-short': {
+          title: 'Short Trips - Duration vs MAE Histogram',
+          type: 'histogram',
+          binSize: '5 seconds',
+          category: 'short',
+          description: 'Error distribution for short duration trips (< 278s)'
+        },
+        'duration-histogram-medium': {
+          title: 'Medium Trips - Duration vs MAE Histogram',
+          type: 'histogram',
+          binSize: '5 seconds',
+          category: 'medium',
+          description: 'Error distribution for medium duration trips (278-609s)'
+        },
+        'duration-histogram-long': {
+          title: 'Long Trips - Duration vs MAE Histogram',
+          type: 'histogram',
+          binSize: '10 seconds',
+          category: 'long',
+          description: 'Error distribution for long duration trips (> 609s)'
+        },
+        'distance-histogram-short': {
+          title: 'Short Trips - Distance vs MAE Histogram',
+          type: 'histogram',
+          binSize: '5 seconds',
+          category: 'short',
+          description: 'Error distribution for short distance trips (< 4km)'
+        },
+        'distance-histogram-medium': {
+          title: 'Medium Trips - Distance vs MAE Histogram',
+          type: 'histogram',
+          binSize: '5 seconds',
+          category: 'medium',
+          description: 'Error distribution for medium distance trips (4-11km)'
+        },
+        'distance-histogram-long': {
+          title: 'Long Trips - Distance vs MAE Histogram',
+          type: 'histogram',
+          binSize: '10 seconds',
+          category: 'long',
+          description: 'Error distribution for long distance trips (> 11km)'
+        }
+      }
+      
+      const config = plotConfigs[plotType]
+      if (config) {
+        // For now, show an alert with plot details
+        // In a real implementation, this would open a modal or new window with the actual plot
+        alert(`${config.title}\n\nType: ${config.type}\nBin Size: ${config.binSize || 'N/A'}\nCategory: ${config.category || 'All'}\n\n${config.description}\n\nX-Axis: ${config.xAxis || 'N/A'}\nY-Axis: ${config.yAxis || 'N/A'}\n\n[This would open a detailed plot window in a real implementation]`)
+      } else {
+        console.warn('Unknown plot type:', plotType)
       }
     },
     
