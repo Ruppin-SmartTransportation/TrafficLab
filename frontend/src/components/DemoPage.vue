@@ -607,7 +607,7 @@
                       <!-- Status Header -->
                       <div class="flex items-center justify-between mb-2">
                         <div class="flex items-center space-x-2">
-                          <span class="text-xs font-medium text-slate-300">Journey #{{ vehicleResults.length - index }}</span>
+                          <span class="text-xs font-medium text-slate-300">Journey #{{ totalJourneyCount - index }}</span>
                         </div>
                         <span class="text-xs px-3 py-1 rounded-full font-medium flex items-center space-x-1"
                               :class="result.status === 'finished' ? 'bg-emerald-600 text-emerald-100' : 'bg-blue-600 text-blue-100'">
@@ -939,6 +939,7 @@ export default {
       // Results tracking
       vehicleResults: [], // Array of vehicle journey results
       maxResults: 20, // Maximum number of results to keep
+      totalJourneyCount: 0, // Total number of journeys in database
       
       // Statistics data
       journeyStatistics: {
@@ -985,7 +986,6 @@ export default {
       plotImage: null,
       
       // Keyboard shortcuts
-      waitingForO: false,
       showSeedingIndicator: false,
       
       // Route data
@@ -2164,6 +2164,9 @@ export default {
         const response = await apiService.getRecentJourneys(20)
         
         if (response.success && response.journeys) {
+          // Store total journey count
+          this.totalJourneyCount = response.total_count || 0
+          
           // Transform database format to frontend format
           this.vehicleResults = response.journeys.map(journey => ({
             vehicle_id: journey.vehicle_id,
@@ -2182,7 +2185,7 @@ export default {
             route_edges: journey.route_edges
           }))
           
-          console.log('✅ Recent journeys loaded from database:', this.vehicleResults.length)
+          console.log('✅ Recent journeys loaded from database:', this.vehicleResults.length, 'Total count:', this.totalJourneyCount)
         } else {
           console.log('📊 No journeys found in database')
           this.vehicleResults = []
@@ -2377,25 +2380,33 @@ export default {
     },
 
     addHiddenCommandListener() {
-      // Hidden commands: Cmd+Shift+D+L (delete last), Cmd+Shift+D+A (delete all)
+      // Hidden commands: C+A+L (delete last), C+A+D (delete all)
       console.log('🔧 Hidden commands available:')
-      console.log('  - Cmd+Shift+D+L: Delete last journey')
-      console.log('  - Cmd+Shift+D+A: Delete all journeys')
+      console.log('  - C+A+L: Delete last journey')
+      console.log('  - C+A+D: Delete all journeys')
       
       this.hiddenCommandHandler = (event) => {
-        // Check for Cmd+Shift+D combination
-        if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'D') {
+        // Check for C+A combination
+        if (event.key.toLowerCase() === 'c') {
           event.preventDefault()
           // Wait for the next key press to determine the action
           const handleNextKey = (nextEvent) => {
-            if (nextEvent.key === 'L' || nextEvent.key === 'l') {
+            if (nextEvent.key.toLowerCase() === 'a') {
               nextEvent.preventDefault()
-              console.log('🗑️ Hidden command triggered: Delete last journey')
-              this.deleteLastJourney()
-            } else if (nextEvent.key === 'A' || nextEvent.key === 'a') {
-              nextEvent.preventDefault()
-              console.log('🗑️ Hidden command triggered: Delete all journeys')
-              this.deleteAllJourneys()
+              // Wait for the final key press
+              const handleFinalKey = (finalEvent) => {
+                if (finalEvent.key.toLowerCase() === 'l') {
+                  finalEvent.preventDefault()
+                  console.log('🗑️ Hidden command triggered: Delete last journey')
+                  this.deleteLastJourney()
+                } else if (finalEvent.key.toLowerCase() === 'd') {
+                  finalEvent.preventDefault()
+                  console.log('🗑️ Hidden command triggered: Delete all journeys')
+                  this.deleteAllJourneys()
+                }
+                document.removeEventListener('keydown', handleFinalKey)
+              }
+              document.addEventListener('keydown', handleFinalKey)
             }
             document.removeEventListener('keydown', handleNextKey)
           }
@@ -2472,6 +2483,11 @@ export default {
         const response = await apiService.saveJourney(journeyData)
         console.log('✅ Journey saved to database:', response)
         
+        // Update total journey count
+        if (response.success && response.journey_number) {
+          this.totalJourneyCount = Math.max(this.totalJourneyCount, response.journey_number)
+        }
+        
         return response
       } catch (error) {
         console.error('❌ Error saving journey to database:', error)
@@ -2532,7 +2548,7 @@ export default {
           
             // Find the journey number for this vehicle
             const result = this.vehicleResults.find(r => r.vehicle_id === vehicle.id)
-            const journeyNumber = result ? (this.vehicleResults.length - this.vehicleResults.indexOf(result)) : '?'
+            const journeyNumber = result ? (this.totalJourneyCount - this.vehicleResults.indexOf(result)) : '?'
             console.log('🔍 Journey number for vehicle:', vehicle.id, 'is', journeyNumber)
           
           // Show overlay for finished vehicle
@@ -3103,6 +3119,102 @@ export default {
         clearInterval(this.simulationUpdateInterval)
         this.simulationUpdateInterval = null
       }
+    },
+    
+    setupKeyboardShortcuts() {
+      // Add keydown event listener for C+A+I
+      document.addEventListener('keydown', this.handleKeyDown)
+      
+      // Add hidden command listener for C+A+L and C+A+D
+      this.addHiddenCommandListener()
+      
+      console.log('🎹 Keyboard shortcuts initialized:')
+      console.log('  - C+A+I: Seed random journeys')
+      console.log('  - C+A+L: Delete last journey')
+      console.log('  - C+A+D: Delete all journeys')
+    },
+    
+    handleKeyDown(event) {
+      // Check for C+A+I combination
+      if (event.key.toLowerCase() === 'c') {
+        event.preventDefault()
+        // Wait for the next key press to determine the action
+        const handleNextKey = (nextEvent) => {
+          if (nextEvent.key.toLowerCase() === 'a') {
+            nextEvent.preventDefault()
+            // Wait for the final key press
+            const handleFinalKey = (finalEvent) => {
+              if (finalEvent.key.toLowerCase() === 'i') {
+                finalEvent.preventDefault()
+                console.log('🎯 Hidden command triggered: C+A+I')
+                this.triggerHiddenCommand()
+              }
+              document.removeEventListener('keydown', handleFinalKey)
+            }
+            document.addEventListener('keydown', handleFinalKey)
+          }
+          document.removeEventListener('keydown', handleNextKey)
+        }
+        document.addEventListener('keydown', handleNextKey)
+      }
+    },
+    
+    async triggerHiddenCommand() {
+      try {
+        console.log('🌱 Triggering hidden command: seeding random journeys...')
+        
+        // Show loading indicator
+        this.showSeedingIndicator = true
+        
+        const response = await apiService.seedRandomJourneys()
+        
+        if (response.success) {
+          console.log('✅ Hidden command successful:', response)
+          
+          // Show success notification
+          this.showNotification('success', `Successfully seeded ${response.inserted_count} random journeys!`)
+          
+          // Reload statistics and recent journeys
+          await this.loadJourneyStatistics()
+          await this.loadRecentJourneysFromDB()
+          
+          // Show error statistics
+          if (response.error_statistics) {
+            const stats = response.error_statistics
+            console.log('📊 Error Statistics:')
+            Object.keys(stats).forEach(bin => {
+              const stat = stats[bin]
+              console.log(`  ${bin}: ${stat.count} trips, MAE ${stat.avg_mae}s (target: ${stat.target_mae}s)`)
+            })
+          }
+        } else {
+          console.error('❌ Hidden command failed:', response)
+          this.showNotification('error', 'Failed to seed data. Check console for details.')
+        }
+      } catch (error) {
+        console.error('❌ Error triggering hidden command:', error)
+        this.showNotification('error', 'Error seeding data. Check console for details.')
+      } finally {
+        this.showSeedingIndicator = false
+      }
+    },
+    
+    showNotification(type, message) {
+      // Simple notification system
+      const notification = document.createElement('div')
+      notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg text-white font-medium ${
+        type === 'success' ? 'bg-green-600' : 'bg-red-600'
+      }`
+      notification.textContent = message
+      
+      document.body.appendChild(notification)
+      
+      // Remove after 5 seconds
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification)
+        }
+      }, 5000)
     }
   },
   
@@ -3134,100 +3246,16 @@ export default {
     this.startLegendAutoFold()
   },
   
-  setupKeyboardShortcuts() {
-    // Add keydown event listener
-    document.addEventListener('keydown', this.handleKeyDown)
-    console.log('🎹 Keyboard shortcuts initialized (Ctrl+Shift+I+O for hidden command)')
-  },
-  
-  handleKeyDown(event) {
-    // Check for Ctrl+Shift+I+O combination
-    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
-      // Start tracking for 'O' key after 'I'
-      this.waitingForO = true
-      console.log('🎹 Detected Ctrl+Shift+I, waiting for O...')
-      return
-    }
-    
-    // If we're waiting for 'O' and it's pressed
-    if (this.waitingForO && event.key.toLowerCase() === 'o') {
-      console.log('🎯 Hidden command triggered: Ctrl+Shift+I+O')
-      this.triggerHiddenCommand()
-      this.waitingForO = false
-      return
-    }
-    
-    // Reset waiting state if any other key is pressed
-    if (this.waitingForO) {
-      this.waitingForO = false
-    }
-  },
-  
-  async triggerHiddenCommand() {
-    try {
-      console.log('🌱 Triggering hidden command: seeding random journeys...')
-      
-      // Show loading indicator
-      this.showSeedingIndicator = true
-      
-      const response = await apiService.seedRandomJourneys()
-      
-      if (response.success) {
-        console.log('✅ Hidden command successful:', response)
-        
-        // Show success notification
-        this.showNotification('success', `Successfully seeded ${response.inserted_count} random journeys!`)
-        
-        // Reload statistics and recent journeys
-        await this.loadJourneyStatistics()
-        await this.loadRecentJourneysFromDB()
-        
-        // Show error statistics
-        if (response.error_statistics) {
-          const stats = response.error_statistics
-          console.log('📊 Error Statistics:')
-          Object.keys(stats).forEach(bin => {
-            const stat = stats[bin]
-            console.log(`  ${bin}: ${stat.count} trips, MAE ${stat.avg_mae}s (target: ${stat.target_mae}s)`)
-          })
-        }
-      } else {
-        console.error('❌ Hidden command failed:', response)
-        this.showNotification('error', 'Failed to seed data. Check console for details.')
-      }
-    } catch (error) {
-      console.error('❌ Error triggering hidden command:', error)
-      this.showNotification('error', 'Error seeding data. Check console for details.')
-    } finally {
-      this.showSeedingIndicator = false
-    }
-  },
-  
-  showNotification(type, message) {
-    // Simple notification system
-    const notification = document.createElement('div')
-    notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg text-white font-medium ${
-      type === 'success' ? 'bg-green-600' : 'bg-red-600'
-    }`
-    notification.textContent = message
-    
-    document.body.appendChild(notification)
-    
-    // Remove after 5 seconds
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification)
-      }
-    }, 5000)
-  },
-  
   beforeUnmount() {
     if (this.animationInterval) {
       clearInterval(this.animationInterval)
     }
     
-    // Clean up keyboard event listener
+    // Clean up keyboard event listeners
     document.removeEventListener('keydown', this.handleKeyDown)
+    if (this.hiddenCommandHandler) {
+      document.removeEventListener('keydown', this.hiddenCommandHandler)
+    }
     
     // Clean up chart instance
     this.destroyChart()

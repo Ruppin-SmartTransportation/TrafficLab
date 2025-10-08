@@ -251,14 +251,16 @@ async def save_journey(journey_data: dict, db: Session = Depends(get_db)):
 async def get_recent_journeys(limit: int = 20, db: Session = Depends(get_db)):
     """Get recent journeys from the database"""
     try:
-        from models.database import get_recent_journeys
+        from models.database import get_recent_journeys, get_journey_count
         
         journeys = get_recent_journeys(db, limit)
+        total_count = get_journey_count(db)
         
         return {
             "success": True,
             "journeys": journeys,
-            "count": len(journeys)
+            "count": len(journeys),
+            "total_count": total_count
         }
     except Exception as e:
         print(f"❌ API: Error getting recent journeys: {e}")
