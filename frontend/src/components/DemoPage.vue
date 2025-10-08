@@ -845,7 +845,9 @@
         <!-- Modal Header -->
         <div class="flex justify-between items-center mb-2">
           <h3 class="text-2xl font-semibold text-slate-100">
-            {{ currentPlotData?.title || 'Plot' }}
+            {{ currentPlotType === 'duration-vs-mae-scatter' ? 'Trip Duration vs MAE Scatter Plot' : 
+               currentPlotType === 'distance-vs-mae-scatter' ? 'Trip Distance vs MAE Scatter Plot' : 
+               currentPlotData?.title || 'Plot' }}
           </h3>
           <button 
             @click="closePlotModal"
@@ -858,13 +860,13 @@
         </div>
         
         <!-- Plot Content -->
-        <div v-if="currentPlotData && currentPlotType === 'duration-vs-mae-scatter'" class="space-y-2">
+        <div v-if="currentPlotData && (currentPlotType === 'duration-vs-mae-scatter' || currentPlotType === 'distance-vs-mae-scatter')" class="space-y-2">
           <!-- Matplotlib Plot Image -->
           <div class="bg-slate-900 rounded-lg p-1">
             <div v-if="plotImage" class="w-full h-[calc(95vh-120px)] flex items-center justify-center">
               <img 
                 :src="plotImage" 
-                alt="Trip Duration vs MAE Scatter Plot"
+                :alt="currentPlotType === 'duration-vs-mae-scatter' ? 'Trip Duration vs MAE Scatter Plot' : 'Trip Distance vs MAE Scatter Plot'"
                 class="max-w-full max-h-full object-contain"
               />
             </div>
@@ -1565,10 +1567,6 @@ export default {
       console.log('🚀 Starting journey from', this.startPoint, 'to', this.destinationPoint)
       
       try {
-        // Debug the route edges
-        console.log('🔍 Route edges:', this.routeEdges)
-        console.log('🔍 Route edges type:', typeof this.routeEdges)
-        console.log('🔍 Route edges is array:', Array.isArray(this.routeEdges))
         
         if (!this.routeEdges || !Array.isArray(this.routeEdges)) {
           console.error('❌ Route edges not available or not an array')
@@ -1578,33 +1576,7 @@ export default {
         
         // Convert Proxy array to plain JavaScript array
         const routeEdgesArray = Array.from(this.routeEdges)
-        console.log('🔍 Converted route edges:', routeEdgesArray)
-        console.log('🔍 Converted route edges type:', typeof routeEdgesArray)
-        console.log('🔍 Converted route edges is array:', Array.isArray(routeEdgesArray))
         
-        // Call the debug API first to see what's being sent
-        try {
-          const debugResponse = await apiService.startJourneyDebug(
-            this.startPoint.id,
-            this.destinationPoint.id,
-            routeEdgesArray
-          )
-          console.log('🔍 Debug response:', debugResponse)
-        } catch (debugError) {
-          console.error('❌ Debug API error:', debugError)
-        }
-        
-        // Call the validation API to test Pydantic validation
-        try {
-          const validationResponse = await apiService.startJourneyValidation(
-            this.startPoint.id,
-            this.destinationPoint.id,
-            routeEdgesArray
-          )
-          console.log('🔍 Validation response:', validationResponse)
-        } catch (validationError) {
-          console.error('❌ Validation API error:', validationError)
-        }
         
         // Call the regular API to add vehicle to simulation
         const response = await apiService.startJourney(
@@ -2132,15 +2104,6 @@ export default {
           this.simulationTime = response.simulation_time || 0
         }
         
-        // Debug logging for simulation time
-        console.log('🕐 Simulation Time Update:', {
-          'raw_response': response,
-          'simulation_time_raw': response.simulation_time,
-          'simulation_time_type': typeof response.simulation_time,
-          'simulationTime_parsed': this.simulationTime,
-          'isSimulationPlaying': this.isSimulationPlaying,
-          'note': 'This should match vehicle start times when journeys are added'
-        })
       } catch (error) {
         console.error('Error loading simulation status:', error)
       }
@@ -2277,7 +2240,6 @@ export default {
       try {
         const response = await apiService.getActiveVehicles()
         this.activeVehicles = response.vehicles || []
-        console.log(`Loaded ${this.activeVehicles.length} active vehicles`)
       } catch (error) {
         console.error('Error loading active vehicles:', error)
         this.activeVehicles = []
@@ -2425,8 +2387,6 @@ export default {
     
     async updateVehicleResult(vehicleId, endTime, actualDuration, predictedDuration) {
       // Update local vehicle result
-      console.log('🔍 Looking for vehicle result:', vehicleId)
-      console.log('🔍 Available vehicle results:', this.vehicleResults.map(r => r.vehicle_id))
       
       const result = this.vehicleResults.find(r => r.vehicle_id === vehicleId)
       if (result) {
@@ -2500,10 +2460,8 @@ export default {
         const response = await apiService.getFinishedVehicles()
         const finishedVehicles = response.finished_vehicles || []
         
-        console.log('🔍 Checking finished vehicles:', finishedVehicles.length)
         
         for (const vehicle of finishedVehicles) {
-          console.log('🔍 Processing finished vehicle:', vehicle.id)
           
           // Skip if we've already shown this vehicle
           if (this.shownFinishedVehicles.has(vehicle.id)) {
@@ -2549,7 +2507,6 @@ export default {
             // Find the journey number for this vehicle
             const result = this.vehicleResults.find(r => r.vehicle_id === vehicle.id)
             const journeyNumber = result ? (this.totalJourneyCount - this.vehicleResults.indexOf(result)) : '?'
-            console.log('🔍 Journey number for vehicle:', vehicle.id, 'is', journeyNumber)
           
           // Show overlay for finished vehicle
           this.showFinishedVehicleOverlay = true
@@ -2583,16 +2540,24 @@ export default {
             console.error('Failed to load plot image:', response)
             alert('Failed to load plot image. Please try again.')
           }
+        } else if (plotType === 'distance-vs-mae-scatter') {
+          try {
+            const response = await apiService.getDistanceVsMaePlotImage()
+            if (response.success) {
+              this.plotImage = response.image
+              this.currentPlotData = { total_points: response.total_points }
+              this.showPlotModal = true
+            } else {
+              console.error('Failed to load plot image:', response)
+              alert('Failed to load plot image. Please try again.')
+            }
+          } catch (error) {
+            console.error('Error calling getDistanceVsMaePlotImage API:', error)
+            alert('Error loading plot image. Please try again.')
+          }
         } else {
           // For other plot types, show placeholder for now
           const plotConfigs = {
-            'distance-vs-mae-scatter': {
-              title: 'Trip Distance vs MAE Scatter Plot',
-              type: 'scatter',
-              xAxis: 'Trip Distance (km)',
-              yAxis: 'MAE (seconds)',
-              description: 'Shows relationship between trip distance and prediction accuracy'
-            },
             'mae-by-time': {
               title: 'MAE by Time of Day',
               type: 'bar',

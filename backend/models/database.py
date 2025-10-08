@@ -490,3 +490,75 @@ def get_duration_vs_mae_plot_data(db: Session):
             "title": "Trip Duration vs MAE Scatter Plot",
             "categories": {}
         }
+
+def get_distance_vs_mae_plot_data(db: Session):
+    """Get data for Trip Distance vs MAE scatter plot"""
+    try:
+        # Get all finished journeys with their data
+        finished_journeys = db.query(Journey).filter(
+            Journey.status == 'finished',
+            Journey.actual_duration.isnot(None),
+            Journey.predicted_eta.isnot(None)
+        ).all()
+        
+        if not finished_journeys:
+            return {
+                "data_points": [],
+                "total_journeys": 0,
+                "x_axis": "Trip Distance (meters)",
+                "y_axis": "MAE (seconds)",
+                "title": "Trip Distance vs MAE Scatter Plot"
+            }
+        
+        data_points = []
+        
+        for journey in finished_journeys:
+            # Calculate predicted duration from ETA
+            predicted_duration = journey.predicted_eta - journey.start_time
+            actual_duration = journey.actual_duration
+            
+            # Calculate MAE (absolute error)
+            mae = abs(predicted_duration - actual_duration)
+            
+            # Determine trip category based on distance
+            distance_km = journey.distance / 1000  # Convert meters to kilometers
+            if distance_km < 4:
+                category = 'short'
+            elif distance_km <= 11:
+                category = 'medium'
+            else:
+                category = 'long'
+            
+            data_points.append({
+                "x": journey.distance,  # Trip distance in meters
+                "y": mae,  # MAE in seconds
+                "category": category,
+                "journey_id": journey.vehicle_id,
+                "distance": journey.distance,
+                "predicted_duration": predicted_duration,
+                "actual_duration": actual_duration
+            })
+        
+        return {
+            "data_points": data_points,
+            "total_journeys": len(data_points),
+            "x_axis": "Trip Distance (meters)",
+            "y_axis": "MAE (seconds)",
+            "title": "Trip Distance vs MAE Scatter Plot",
+            "categories": {
+                "short": {"label": "Short Trips (< 4km)", "color": "#3b82f6"},
+                "medium": {"label": "Medium Trips (4-11km)", "color": "#f59e0b"},
+                "long": {"label": "Long Trips (> 11km)", "color": "#10b981"}
+            }
+        }
+        
+    except Exception as e:
+        print(f"Error getting distance vs MAE plot data: {e}")
+        return {
+            "data_points": [],
+            "total_journeys": 0,
+            "x_axis": "Trip Distance (meters)",
+            "y_axis": "MAE (seconds)",
+            "title": "Trip Distance vs MAE Scatter Plot",
+            "categories": {}
+        }

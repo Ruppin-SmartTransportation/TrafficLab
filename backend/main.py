@@ -358,6 +358,22 @@ async def get_duration_vs_mae_data(db: Session = Depends(get_db)):
         print(f"❌ API: Error getting duration vs MAE plot data: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get plot data: {str(e)}")
 
+@app.get("/api/journeys/plot-data/distance-vs-mae")
+async def get_distance_vs_mae_data(db: Session = Depends(get_db)):
+    """Get data for Trip Distance vs MAE scatter plot"""
+    try:
+        from models.database import get_distance_vs_mae_plot_data
+        
+        plot_data = get_distance_vs_mae_plot_data(db)
+        
+        return {
+            "success": True,
+            "plot_data": plot_data
+        }
+    except Exception as e:
+        print(f"❌ API: Error getting distance vs MAE plot data: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get plot data: {str(e)}")
+
 @app.get("/api/journeys/plot-image/duration-vs-mae")
 async def get_duration_vs_mae_plot_image(db: Session = Depends(get_db)):
     """Generate matplotlib plot image for Trip Duration vs MAE scatter plot"""
@@ -414,6 +430,92 @@ async def get_duration_vs_mae_plot_image(db: Session = Depends(get_db)):
         
         # Set axis ranges
         ax.set_xlim(0, 80)  # 0 to 80 minutes
+        ax.set_ylim(0, 200)  # 0 to 200 seconds
+        
+        # Set grid
+        ax.grid(True, alpha=0.3, color='gray')
+        ax.set_facecolor('black')
+        
+        # Set legend
+        ax.legend(loc='upper right', framealpha=0.8)
+        
+        # Set tick colors
+        ax.tick_params(colors='white')
+        
+        # Convert to base64 string
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight', 
+                   facecolor='black', edgecolor='none')
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.getvalue()).decode()
+        plt.close(fig)
+        
+        return {
+            "success": True,
+            "image": f"data:image/png;base64,{image_base64}",
+            "total_points": len(plot_data['data_points'])
+        }
+        
+    except Exception as e:
+        print(f"❌ API: Error generating matplotlib plot: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate plot: {str(e)}")
+
+@app.get("/api/journeys/plot-image/distance-vs-mae")
+async def get_distance_vs_mae_plot_image(db: Session = Depends(get_db)):
+    """Generate matplotlib plot image for Trip Distance vs MAE scatter plot"""
+    try:
+        from models.database import get_distance_vs_mae_plot_data
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend
+        import matplotlib.pyplot as plt
+        import io
+        import base64
+        
+        # Get plot data
+        plot_data = get_distance_vs_mae_plot_data(db)
+        
+        if not plot_data.get('data_points'):
+            return {
+                "success": False,
+                "message": "No data available for plotting"
+            }
+        
+        # Create matplotlib figure
+        plt.style.use('dark_background')
+        fig, ax = plt.subplots(figsize=(12, 8))
+        
+        # Define colors for categories
+        colors = {
+            'short': '#3b82f6',    # Blue
+            'medium': '#f59e0b',   # Orange
+            'long': '#10b981'      # Green
+        }
+        
+        # Plot data points by category
+        for category, color in colors.items():
+            category_points = [p for p in plot_data['data_points'] if p['category'] == category]
+            if category_points:
+                x_vals = [p['x'] for p in category_points]
+                y_vals = [p['y'] for p in category_points]
+                
+                # Convert distance from meters to kilometers for display
+                x_vals_km = [x / 1000 for x in x_vals]
+                
+                ax.scatter(x_vals_km, y_vals, 
+                          c=color, 
+                          label=plot_data['categories'][category]['label'],
+                          alpha=0.7, 
+                          s=60,
+                          edgecolors='white',
+                          linewidth=0.5)
+        
+        # Set axis labels and title
+        ax.set_xlabel('Trip Distance (km)', fontsize=14, color='white')
+        ax.set_ylabel('MAE (seconds)', fontsize=14, color='white')
+        ax.set_title('Trip Distance vs MAE Scatter Plot', fontsize=16, color='white', pad=20)
+        
+        # Set axis ranges
+        ax.set_xlim(0, 20)  # 0 to 20 kilometers
         ax.set_ylim(0, 200)  # 0 to 200 seconds
         
         # Set grid

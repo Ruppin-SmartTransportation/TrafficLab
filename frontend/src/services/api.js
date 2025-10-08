@@ -278,6 +278,14 @@ class ApiService {
     return this.get('/api/journeys/plot-image/duration-vs-mae')
   }
 
+  async getDistanceVsMaePlotData() {
+    return this.get('/api/journeys/plot-data/distance-vs-mae')
+  }
+
+  async getDistanceVsMaePlotImage() {
+    return this.get('/api/journeys/plot-image/distance-vs-mae')
+  }
+
   async seedRandomJourneys() {
     return this.post('/api/admin/seed-data')
   }
