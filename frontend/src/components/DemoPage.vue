@@ -31,7 +31,7 @@
                 
                 <!-- Center Time Display -->
                 <div class="absolute left-1/2 transform -translate-x-1/2">
-                  <div class="text-2xl font-mono font-bold text-gray-800 tracking-wider">
+                  <div class="text-xl font-semibold text-gray-800">
                     {{ formatTimeWithDay(simulationTime) }}
                   </div>
                 </div>
@@ -70,7 +70,7 @@
             
             <!-- SUMO Network Container -->
                   <div 
-                    class="relative bg-gray-300 h-[calc(92vh-276px)]"
+                    class="relative bg-gray-300 h-[calc(105.8vh-317.4px)]"
                     ref="mapContainer"
                   >
               <!-- SUMO Network Visualization -->
@@ -364,8 +364,101 @@
                 </div>
               </div>
 
+              <!-- Statistics Section (Left side overlay) -->
+              <div class="absolute top-0 right-full bg-slate-900 bg-opacity-98 rounded-l-lg shadow-xl pointer-events-auto animate-fade-in h-[calc(105.8vh-317.4px)]" style="width: 280px; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;">
+                <!-- Statistics Header -->
+                <div class="flex items-center justify-between p-4 border-b border-slate-700 bg-slate-800">
+                  <h3 class="text-sm font-semibold text-slate-100 flex items-center">
+                    <span class="mr-2 text-green-400">📈</span>
+                    Statistics
+                  </h3>
+                </div>
+                
+                <!-- Statistics Content -->
+                <div class="p-4 h-full overflow-y-auto hide-scrollbar scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
+                  <!-- First Line: Basic Statistics -->
+                  <div class="grid grid-cols-3 gap-2 mb-3">
+                    <!-- Total Journeys -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">Total Journeys</div>
+                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.total_journeys }}</div>
+                    </div>
+                    
+                    <!-- Average Duration -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">Avg Duration</div>
+                      <div class="text-sm font-bold text-slate-100">{{ formatTime(journeyStatistics.average_duration) }}</div>
+                    </div>
+                    
+                    <!-- Average Distance -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">Avg Distance</div>
+                      <div class="text-sm font-bold text-slate-100">{{ (journeyStatistics.average_distance / 1000).toFixed(1) }}km</div>
+                    </div>
+                  </div>
+                  
+                  <!-- Second Line: Prediction Accuracy Metrics -->
+                  <div class="grid grid-cols-3 gap-2 mb-3">
+                    <!-- MAE -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">MAE</div>
+                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.mae }}s</div>
+                    </div>
+                    
+                    <!-- RMSE -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">RMSE</div>
+                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.rmse }}s</div>
+                    </div>
+                    
+                    <!-- MAPE -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">MAPE</div>
+                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.mape.toFixed(1) }}%</div>
+                    </div>
+                  </div>
+                  
+                  <!-- Separating Line -->
+                  <div class="border-t border-slate-600 mb-4"></div>
+                  
+                  <!-- Third Line: MAE by trip duration -->
+                  <div class="mb-3">
+                    <div class="text-xs text-slate-400 mb-2 font-medium text-center">MAE by trip duration</div>
+                    <div class="grid grid-cols-3 gap-2">
+                      <!-- Short Trips -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Duration: less than 278 seconds">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">Short</div>
+                        <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.short_trips.mae }}s</div>
+                        <div class="text-xs text-slate-400">{{ journeyStatistics.short_trips.count }}</div>
+                      </div>
+                      
+                      <!-- Medium Trips -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Duration: 278 to 609 seconds">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">Medium</div>
+                        <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.medium_trips.mae }}s</div>
+                        <div class="text-xs text-slate-400">{{ journeyStatistics.medium_trips.count }}</div>
+                      </div>
+                      
+                      <!-- Long Trips -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Duration: more than 609 seconds">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">Long</div>
+                        <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.long_trips.mae }}s</div>
+                        <div class="text-xs text-slate-400">{{ journeyStatistics.long_trips.count }}</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Additional Statistics Placeholder -->
+                  <div class="text-center text-slate-400 text-xs py-4">
+                    <div class="text-2xl mb-2">📈</div>
+                    <div class="font-medium">More analytics coming soon</div>
+                    <div class="text-xs mt-1">Advanced performance metrics will be added here</div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Results Summary Section -->
-              <div class="absolute top-0 left-full bg-slate-900 bg-opacity-98 rounded-r-lg shadow-xl pointer-events-auto animate-fade-in h-[calc(92vh-276px)]" style="width: 280px; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;">
+              <div class="absolute top-0 left-full bg-slate-900 bg-opacity-98 rounded-r-lg shadow-xl pointer-events-auto animate-fade-in h-[calc(105.8vh-317.4px)]" style="width: 280px; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;">
                 <!-- Results Header -->
                 <div class="flex items-center justify-between p-4 border-b border-slate-700 bg-slate-800">
                   <h3 class="text-sm font-semibold text-slate-100 flex items-center">
@@ -668,6 +761,28 @@ export default {
       // Results tracking
       vehicleResults: [], // Array of vehicle journey results
       maxResults: 20, // Maximum number of results to keep
+      
+      // Statistics data
+      journeyStatistics: {
+        total_journeys: 0,
+        average_duration: 0,
+        average_distance: 0,
+        mae: 0,
+        rmse: 0,
+        mape: 0,
+        short_trips: {
+          mae: 0,
+          count: 0
+        },
+        medium_trips: {
+          mae: 0,
+          count: 0
+        },
+        long_trips: {
+          mae: 0,
+          count: 0
+        }
+      },
       
       // Route data
       calculatedRoute: null,
@@ -1874,6 +1989,45 @@ export default {
         this.vehicleResults = []
       }
     },
+
+    async loadJourneyStatistics() {
+      try {
+        console.log('📊 Loading journey statistics...')
+        const response = await apiService.getJourneyStatistics()
+        
+        if (response.success && response.statistics) {
+          this.journeyStatistics = response.statistics
+          console.log('✅ Journey statistics loaded:', this.journeyStatistics)
+        } else {
+          console.log('📊 No statistics available')
+          this.journeyStatistics = {
+            total_journeys: 0,
+            average_duration: 0,
+            average_distance: 0,
+            mae: 0,
+            rmse: 0,
+            mape: 0,
+            short_trips: { mae: 0, count: 0 },
+            medium_trips: { mae: 0, count: 0 },
+            long_trips: { mae: 0, count: 0 }
+          }
+        }
+      } catch (error) {
+        console.error('❌ Failed to load journey statistics:', error)
+        // Keep default values on error
+        this.journeyStatistics = {
+          total_journeys: 0,
+          average_duration: 0,
+          average_distance: 0,
+          mae: 0,
+          rmse: 0,
+          mape: 0,
+          short_trips: { mae: 0, count: 0 },
+          medium_trips: { mae: 0, count: 0 },
+          long_trips: { mae: 0, count: 0 }
+        }
+      }
+    },
     
     addVehicleResult(vehicleId, startTime, startTimeString, distance, predictedEta, startEdge = null, endEdge = null, routeEdges = null) {
       const result = {
@@ -1993,14 +2147,67 @@ export default {
       console.log('🗑️ All results cleared')
     },
 
+    async deleteLastJourney() {
+      try {
+        console.log('🗑️ Deleting last journey from database...')
+        const response = await apiService.deleteLastJourney()
+        
+        if (response.success) {
+          console.log('✅ Last journey deleted:', response.deleted_journey_number)
+          // Refresh the recent journeys from database
+          await this.loadRecentJourneysFromDB()
+          // Refresh statistics after deleting journey
+          await this.loadJourneyStatistics()
+        } else {
+          console.log('ℹ️ No journeys found to delete')
+        }
+      } catch (error) {
+        console.error('❌ Error deleting last journey:', error)
+      }
+    },
+
+    async deleteAllJourneys() {
+      try {
+        console.log('🗑️ Deleting all journeys from database...')
+        const response = await apiService.deleteAllJourneys()
+        
+        if (response.success) {
+          console.log('✅ All journeys deleted:', response.deleted_count)
+          // Clear local results and refresh from database
+          this.vehicleResults = []
+          await this.loadRecentJourneysFromDB()
+          // Refresh statistics after deleting all journeys
+          await this.loadJourneyStatistics()
+        }
+      } catch (error) {
+        console.error('❌ Error deleting all journeys:', error)
+      }
+    },
+
     addHiddenCommandListener() {
-      // Hidden command: Ctrl+Shift+D to clear all results
-      console.log('🔧 Hidden command available: Ctrl+Shift+D to clear all results')
+      // Hidden commands: Cmd+Shift+D+L (delete last), Cmd+Shift+D+A (delete all)
+      console.log('🔧 Hidden commands available:')
+      console.log('  - Cmd+Shift+D+L: Delete last journey')
+      console.log('  - Cmd+Shift+D+A: Delete all journeys')
+      
       this.hiddenCommandHandler = (event) => {
-        if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+        // Check for Cmd+Shift+D combination
+        if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'D') {
           event.preventDefault()
-          console.log('🗑️ Hidden command triggered: Clear all results')
-          this.clearAllResults()
+          // Wait for the next key press to determine the action
+          const handleNextKey = (nextEvent) => {
+            if (nextEvent.key === 'L' || nextEvent.key === 'l') {
+              nextEvent.preventDefault()
+              console.log('🗑️ Hidden command triggered: Delete last journey')
+              this.deleteLastJourney()
+            } else if (nextEvent.key === 'A' || nextEvent.key === 'a') {
+              nextEvent.preventDefault()
+              console.log('🗑️ Hidden command triggered: Delete all journeys')
+              this.deleteAllJourneys()
+            }
+            document.removeEventListener('keydown', handleNextKey)
+          }
+          document.addEventListener('keydown', handleNextKey)
         }
       }
       document.addEventListener('keydown', this.hiddenCommandHandler)
@@ -2034,6 +2241,8 @@ export default {
         // Save journey to database only after results are displayed
         try {
           await this.saveJourneyToDatabase(result)
+          // Refresh statistics after saving journey
+          await this.loadJourneyStatistics()
         } catch (error) {
           console.error('❌ Error saving journey to database:', error)
         }
@@ -2362,6 +2571,7 @@ export default {
     await this.loadNetworkData()
     await this.loadSimulationStatus()
     await this.loadRecentJourneysFromDB()
+    await this.loadJourneyStatistics()
     
     // Clear any old finished vehicles to prevent showing stale data on page refresh
     try {

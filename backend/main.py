@@ -324,6 +324,22 @@ async def get_journey_count(db: Session = Depends(get_db)):
         print(f"❌ API: Error getting journey count: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get journey count: {str(e)}")
 
+@app.get("/api/journeys/statistics")
+async def get_journey_statistics(db: Session = Depends(get_db)):
+    """Get journey statistics including MAE, RMSE, MAPE"""
+    try:
+        from models.database import get_journey_statistics
+        
+        stats = get_journey_statistics(db)
+        
+        return {
+            "success": True,
+            "statistics": stats
+        }
+    except Exception as e:
+        print(f"❌ API: Error getting journey statistics: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get journey statistics: {str(e)}")
+
 @app.get("/api/simulation/vehicles/finished")
 async def get_finished_vehicles():
     """Get finished user-defined vehicles"""

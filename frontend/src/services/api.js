@@ -265,6 +265,10 @@ class ApiService {
   async getJourneyCount() {
     return this.get('/api/journeys/count')
   }
+
+  async getJourneyStatistics() {
+    return this.get('/api/journeys/statistics')
+  }
 }
 
 // Export a singleton instance

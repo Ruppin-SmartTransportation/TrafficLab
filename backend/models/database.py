@@ -253,3 +253,125 @@ def clear_journeys(db: Session):
         print(f"Error clearing journeys: {e}")
         db.rollback()
         raise
+
+def get_journey_statistics(db: Session):
+    """Get journey statistics including MAE, RMSE, MAPE"""
+    try:
+        import math
+        
+        # Get all finished journeys
+        finished_journeys = db.query(Journey).filter(
+            Journey.status == 'finished',
+            Journey.actual_duration.isnot(None),
+            Journey.predicted_eta.isnot(None)
+        ).all()
+        
+        if not finished_journeys:
+            return {
+                "total_journeys": 0,
+                "average_duration": 0,
+                "average_distance": 0,
+                "mae": 0,
+                "rmse": 0,
+                "mape": 0
+            }
+        
+        # Calculate basic statistics
+        total_journeys = len(finished_journeys)
+        total_duration = sum(j.actual_duration for j in finished_journeys)
+        total_distance = sum(j.distance for j in finished_journeys)
+        average_duration = total_duration / total_journeys if total_journeys > 0 else 0
+        average_distance = total_distance / total_journeys if total_journeys > 0 else 0
+        
+        # Calculate prediction accuracy metrics
+        errors = []
+        absolute_percentage_errors = []
+        
+        for journey in finished_journeys:
+            # Calculate predicted duration from ETA
+            predicted_duration = journey.predicted_eta - journey.start_time
+            actual_duration = journey.actual_duration
+            
+            # Calculate error
+            error = predicted_duration - actual_duration
+            errors.append(error)
+            
+            # Calculate absolute percentage error (avoid division by zero)
+            if actual_duration > 0:
+                ape = abs(error) / actual_duration * 100
+                absolute_percentage_errors.append(ape)
+        
+        # Calculate MAE (Mean Absolute Error)
+        mae = sum(abs(e) for e in errors) / len(errors) if errors else 0
+        
+        # Calculate RMSE (Root Mean Square Error)
+        rmse = math.sqrt(sum(e**2 for e in errors) / len(errors)) if errors else 0
+        
+        # Calculate MAPE (Mean Absolute Percentage Error)
+        mape = sum(absolute_percentage_errors) / len(absolute_percentage_errors) if absolute_percentage_errors else 0
+        
+        # Calculate per-bin MAE results
+        short_trips = []
+        medium_trips = []
+        long_trips = []
+        
+        for journey in finished_journeys:
+            predicted_duration = journey.predicted_eta - journey.start_time
+            actual_duration = journey.actual_duration
+            error = predicted_duration - actual_duration
+            
+            if actual_duration < 278:
+                short_trips.append(error)
+            elif actual_duration <= 609:
+                medium_trips.append(error)
+            else:
+                long_trips.append(error)
+        
+        # Calculate MAE for each bin
+        short_mae = sum(abs(e) for e in short_trips) / len(short_trips) if short_trips else 0
+        medium_mae = sum(abs(e) for e in medium_trips) / len(medium_trips) if medium_trips else 0
+        long_mae = sum(abs(e) for e in long_trips) / len(long_trips) if long_trips else 0
+        
+        return {
+            "total_journeys": total_journeys,
+            "average_duration": round(average_duration, 2),
+            "average_distance": round(average_distance, 2),
+            "mae": round(mae, 2),
+            "rmse": round(rmse, 2),
+            "mape": round(mape, 2),
+            "short_trips": {
+                "mae": round(short_mae, 2),
+                "count": len(short_trips)
+            },
+            "medium_trips": {
+                "mae": round(medium_mae, 2),
+                "count": len(medium_trips)
+            },
+            "long_trips": {
+                "mae": round(long_mae, 2),
+                "count": len(long_trips)
+            }
+        }
+        
+    except Exception as e:
+        print(f"Error calculating journey statistics: {e}")
+        return {
+            "total_journeys": 0,
+            "average_duration": 0,
+            "average_distance": 0,
+            "mae": 0,
+            "rmse": 0,
+            "mape": 0,
+            "short_trips": {
+                "mae": 0,
+                "count": 0
+            },
+            "medium_trips": {
+                "mae": 0,
+                "count": 0
+            },
+            "long_trips": {
+                "mae": 0,
+                "count": 0
+            }
+        }
