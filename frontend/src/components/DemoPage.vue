@@ -372,17 +372,6 @@
                     <span class="mr-2 text-blue-400">📊</span>
                     Recent Journeys
                   </h3>
-                  <div class="flex items-center space-x-2">
-                    <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">{{ vehicleResults.length }}</span>
-                    <button 
-                      v-if="vehicleResults.length > 0"
-                      @click="refreshResults"
-                      class="text-xs text-slate-400 hover:text-slate-200 bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition-colors"
-                      title="Refresh results"
-                    >
-                      🔄
-                    </button>
-                  </div>
                 </div>
                 
                 <!-- Results Content -->
@@ -1998,11 +1987,6 @@ export default {
       this.resetLegendAutoFold()
     },
     
-    
-    async refreshResults() {
-      await this.loadResults()
-      console.log('🔄 Refreshed results')
-    },
 
     clearAllResults() {
       this.vehicleResults = []
