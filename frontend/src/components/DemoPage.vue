@@ -29,6 +29,13 @@
                   </div>
                 </div>
                 
+                <!-- Center Time Display -->
+                <div class="absolute left-1/2 transform -translate-x-1/2">
+                  <div class="text-2xl font-mono font-bold text-gray-800 tracking-wider">
+                    {{ formatTimeWithDay(simulationTime) }}
+                  </div>
+                </div>
+                
                 <!-- Control Buttons -->
                 <div class="flex space-x-3">
               <!-- Simulation Playback Controls - Always show -->
@@ -55,9 +62,6 @@
                   </div>
                 <div class="text-sm text-gray-600">
                   Active: {{ simulationStatus.vehicles_in_route || 0 }}
-                </div>
-                <div class="text-sm text-gray-600 font-mono">
-                  Time: {{ simulationTime }}
                 </div>
               </div>
                 </div>
@@ -271,6 +275,265 @@
                 
               </svg>
 
+              <!-- Map Legend -->
+              <div v-if="showLegend" class="absolute top-4 left-4 bg-white bg-opacity-95 rounded-lg shadow-lg pointer-events-auto animate-fade-in" style="max-width: 200px;">
+                <!-- Legend Header (Always Visible) -->
+                <div 
+                  @click="toggleLegend"
+                  class="flex items-center justify-between cursor-pointer hover:bg-gray-50 rounded-t-lg transition-colors"
+                  :class="legendCollapsed ? 'p-2' : 'p-3'"
+                >
+                  <h3 class="font-bold text-gray-800 flex items-center"
+                      :class="legendCollapsed ? 'text-xs' : 'text-sm'">
+                    <span :class="legendCollapsed ? 'mr-0.5' : 'mr-1'">🗺️</span>
+                    <span v-if="!legendCollapsed">Legend</span>
+                  </h3>
+                  <span class="text-gray-500 text-xs transform transition-transform" 
+                        :class="{ 'rotate-180': !legendCollapsed }">
+                    ▼
+                  </span>
+                </div>
+                
+                <!-- Collapsible Content -->
+                <div v-if="!legendCollapsed" class="px-3 pb-3">
+                  <!-- Roads Section -->
+                  <div class="mb-3">
+                    <h4 class="text-xs font-semibold text-gray-700 mb-1">Roads</h4>
+                    <div class="space-y-1">
+                      <div class="flex items-center">
+                        <div class="w-4 h-0.5 bg-gray-600 mr-2"></div>
+                        <span class="text-xs text-gray-600">Regular</span>
+                      </div>
+                      <div class="flex items-center">
+                        <svg class="w-4 h-0.5 mr-2" viewBox="0 0 16 2">
+                          <line x1="0" y1="1" x2="16" y2="1" stroke="#1e40af" stroke-width="1" opacity="0.6" stroke-dasharray="2,2"/>
+                        </svg>
+                        <span class="text-xs text-gray-600">Expressways</span>
+                      </div>
+                      <div class="flex items-center">
+                        <div class="w-4 h-1 bg-green-500 mr-2"></div>
+                        <span class="text-xs text-gray-600">Route</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Markers Section -->
+                  <div class="mb-3">
+                    <h4 class="text-xs font-semibold text-gray-700 mb-1">Markers</h4>
+                    <div class="space-y-1">
+                      <div class="flex items-center">
+                        <div class="w-3 h-3 bg-green-500 rounded-full mr-2 border border-white"></div>
+                        <span class="text-xs text-gray-600">Start (S)</span>
+                      </div>
+                      <div class="flex items-center">
+                        <div class="w-3 h-3 bg-red-500 rounded-full mr-2 border border-white"></div>
+                        <span class="text-xs text-gray-600">Dest (D)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Vehicles Section -->
+                  <div class="mb-3">
+                    <h4 class="text-xs font-semibold text-gray-700 mb-1">Vehicles</h4>
+                    <div class="space-y-1">
+                      <div class="flex items-center">
+                        <div class="w-3 h-3 bg-blue-500 rounded-full mr-2 border border-black"></div>
+                        <span class="text-xs text-gray-600">Cars</span>
+                      </div>
+                      <div class="flex items-center">
+                        <div class="w-3 h-3 bg-orange-500 rounded-full mr-2 border border-black"></div>
+                        <span class="text-xs text-gray-600">Buses</span>
+                      </div>
+                      <div class="flex items-center">
+                        <div class="w-3 h-3 bg-green-500 rounded-full mr-2 border border-black"></div>
+                        <span class="text-xs text-gray-600">Trucks</span>
+                      </div>
+                      <div class="flex items-center">
+                        <svg class="w-3 h-3 mr-2" viewBox="0 0 12 12">
+                          <path d="M6 1l1.5 3L12 4.5l-2.5 2.5L11 11l-3-1.5L5 11l1-4L3 4.5l3.5-.5L6 1z" fill="#fbbf24" stroke="#000000" stroke-width="0.3"/>
+                        </svg>
+                        <span class="text-xs text-gray-600">Your Vehicle</span>
+                      </div>
+                      <div class="flex items-center">
+                        <div class="w-3 h-3 bg-white rounded-full mr-2 border border-black"></div>
+                        <span class="text-xs text-gray-600">Not Tracked</span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Results Summary Section -->
+              <div class="absolute top-0 left-full bg-slate-900 bg-opacity-98 rounded-r-lg shadow-xl pointer-events-auto animate-fade-in h-[calc(92vh-276px)]" style="width: 280px; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;">
+                <!-- Results Header -->
+                <div class="flex items-center justify-between p-4 border-b border-slate-700 bg-slate-800">
+                  <h3 class="text-sm font-semibold text-slate-100 flex items-center">
+                    <span class="mr-2 text-blue-400">📊</span>
+                    Recent Journeys
+                  </h3>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">{{ vehicleResults.length }}</span>
+                    <button 
+                      v-if="vehicleResults.length > 0"
+                      @click="refreshResults"
+                      class="text-xs text-slate-400 hover:text-slate-200 bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition-colors"
+                      title="Refresh results"
+                    >
+                      🔄
+                    </button>
+                  </div>
+                </div>
+                
+                <!-- Results Content -->
+                <div class="p-4 h-full overflow-y-auto hide-scrollbar scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
+                  <div v-if="vehicleResults.length === 0" class="text-center text-slate-400 text-sm py-8">
+                    <div class="text-4xl mb-3">🚗</div>
+                    <div class="font-medium">No journeys started yet</div>
+                    <div class="text-xs mt-1">Click on roads to set start and destination points</div>
+                  </div>
+                  
+                  <div v-else class="space-y-1.5">
+                    <div v-for="(result, index) in vehicleResults" :key="result.vehicle_id" 
+                         class="border border-slate-600 rounded-lg p-2 bg-slate-800 hover:bg-slate-750 transition-all duration-200 hover:shadow-lg hover:border-slate-500 will-change-transform"
+                         :class="{ 'opacity-50': result.status === 'running' && !isSimulationPlaying }">
+                      <!-- Status Header -->
+                      <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-2">
+                          <span class="text-xs font-medium text-slate-300">Journey #{{ vehicleResults.length - index }}</span>
+                        </div>
+                        <span class="text-xs px-3 py-1 rounded-full font-medium flex items-center space-x-1"
+                              :class="result.status === 'finished' ? 'bg-emerald-600 text-emerald-100' : 'bg-blue-600 text-blue-100'">
+                          <span v-if="result.status === 'finished'">✓</span>
+                          <span class="font-mono">{{ result.status === 'finished' ? 'Completed' : 'Running' }}</span>
+                          <span v-if="result.status === 'running'" class="ml-1 font-mono text-xs">
+                            {{ formatTime(Math.max(0, simulationTime - result.start_time)) }}
+                          </span>
+                        </span>
+                      </div>
+                      
+                      <!-- Top Section: Start and Distance -->
+                      <div class="grid grid-cols-2 gap-1.5 mb-2">
+                        <!-- Start Time -->
+                        <div class="bg-slate-700/50 rounded p-1.5">
+                          <div class="text-xs text-slate-400 mb-0.5 font-medium flex items-center">
+                            <span class="mr-1">🕐</span>
+                            Start
+                          </div>
+                          <div class="text-xs font-mono text-slate-100">
+                            {{ result.start_time_string ? formatTimeWithDay(result.start_time_string) : formatTimeWithDay(result.start_time) }}
+                          </div>
+                        </div>
+                        
+                        <!-- Distance -->
+                        <div class="bg-slate-700/50 rounded p-1.5">
+                          <div class="text-xs text-slate-400 mb-0.5 font-medium flex items-center">
+                            <span class="mr-1">📏</span>
+                            Distance
+                          </div>
+                          <div class="text-xs font-mono text-slate-100">
+                            {{ (result.distance / 1000).toFixed(2) }}km
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Line Separator -->
+                      <div class="border-t border-slate-600 mb-2"></div>
+                      
+                      <!-- Middle Section: Prediction -->
+                      <div class="text-xs font-medium text-slate-300 mb-1.5 flex items-center">
+                        <span class="mr-1">🎯</span>
+                        Prediction
+                      </div>
+                      <div class="grid grid-cols-2 gap-1.5 mb-2">
+                        <!-- ETA -->
+                        <div class="bg-slate-700/50 rounded p-1.5">
+                          <div class="text-xs text-slate-400 mb-0.5 font-medium flex items-center">
+                            <span class="mr-1">🎯</span>
+                            ETA
+                          </div>
+                          <div class="text-xs font-mono text-slate-100">
+                            {{ formatTime(result.predicted_eta) }}
+                          </div>
+                        </div>
+                        
+                        <!-- Estimated Duration -->
+                        <div class="bg-slate-700/50 rounded p-1.5">
+                          <div class="text-xs text-slate-400 mb-0.5 font-medium flex items-center">
+                            <span class="mr-1">⏱️</span>
+                            Est. Duration
+                          </div>
+                          <div class="text-xs font-mono text-slate-100">
+                            {{ calculateDuration(result.start_time_string, formatTime(result.predicted_eta)) }}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Line Separator -->
+                      <div class="border-t border-slate-600 mb-2"></div>
+                      
+                      <!-- Results (only if finished) -->
+                      <div v-if="result.status === 'finished'" class="space-y-1.5">
+                        <div class="text-xs font-medium text-slate-300 mb-1.5 flex items-center">
+                          <span class="mr-1">📊</span>
+                          Results
+                        </div>
+                        
+                        <!-- First Line: Arrival Time and Duration -->
+                        <div class="grid grid-cols-2 gap-1.5 mb-1.5">
+                          <!-- Arrival Time -->
+                          <div class="bg-slate-700/50 rounded p-1.5">
+                            <div class="text-xs text-slate-400 mb-0.5 font-medium">Arrival Time</div>
+                            <div class="text-xs font-mono text-slate-100">
+                              {{ result.end_time_string || formatTime(result.end_time) }}
+                            </div>
+                          </div>
+                          
+                          <!-- Duration -->
+                          <div class="bg-slate-700/50 rounded p-1.5">
+                            <div class="text-xs text-slate-400 mb-0.5 font-medium">Duration</div>
+                            <div class="text-xs font-mono text-slate-100">
+                              {{ formatTime(result.actual_duration) }}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <!-- Second Line: Error and Accuracy -->
+                        <div class="grid grid-cols-2 gap-1.5">
+                          <!-- Absolute Error -->
+                          <div class="bg-slate-700/50 rounded p-1.5">
+                            <div class="text-xs text-slate-400 mb-0.5 font-medium">Error</div>
+                            <div class="text-xs font-mono px-1.5 py-0.5 rounded" 
+                                 :class="calculateError(result) < 30 ? 'text-emerald-300 bg-emerald-900/30' : calculateError(result) < 60 ? 'text-yellow-300 bg-yellow-900/30' : 'text-red-300 bg-red-900/30'">
+                              {{ Math.round(calculateError(result)) }}s
+                            </div>
+                          </div>
+                          
+                          <!-- Accuracy -->
+                          <div class="bg-slate-700/50 rounded p-1.5">
+                            <div class="text-xs text-slate-400 mb-0.5 font-medium">Accuracy</div>
+                            <div class="text-xs font-mono px-1.5 py-0.5 rounded" 
+                                 :class="calculateAccuracy(result) > 80 ? 'text-emerald-300 bg-emerald-900/30' : calculateAccuracy(result) > 60 ? 'text-yellow-300 bg-yellow-900/30' : 'text-red-300 bg-red-900/30'">
+                              {{ calculateAccuracy(result).toFixed(1) }}%
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Scroll to top button -->
+                    <div v-if="vehicleResults.length > 3" class="sticky bottom-0 pt-2">
+                      <button 
+                        @click="scrollToTop"
+                        class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-slate-100 py-1.5 px-3 rounded-lg text-xs font-medium transition-colors duration-200"
+                      >
+                        ↑ Scroll to Top
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Expressway Overlay - Elegant design -->
               <div v-if="showExpresswayOverlay" class="fixed top-4 right-4 z-50 pointer-events-auto">
                 <div class="bg-red-500 bg-opacity-95 rounded-xl shadow-xl p-4 text-center max-w-xs animate-pulse">
@@ -317,35 +580,22 @@
               </div>
               
               <!-- Simulation Running Overlay - Same dimensions as instruction overlay -->
-              <div v-if="showSimulationOverlay" class="absolute top-4 right-4 pointer-events-auto">
-                <div class="bg-orange-500 bg-opacity-95 rounded-xl shadow-xl p-4 text-center max-w-xs animate-pulse">
-                  <div class="text-2xl mb-2 animate-bounce">
-                    <span>🚗</span>
-                </div>
-                  <h3 class="text-lg font-bold text-white mb-1">
-                    Stop simulation to add trip
-                  </h3>
-                  <p class="text-sm text-orange-100">
-                    Click the stop button to add a new journey
-                  </p>
+            <div v-if="showSimulationOverlay" class="absolute top-4 right-4 pointer-events-auto">
+              <div class="bg-orange-500 bg-opacity-95 rounded-xl shadow-xl p-4 text-center max-w-xs animate-pulse">
+                <div class="text-2xl mb-2 animate-bounce">
+                  <span>🚗</span>
+              </div>
+                <h3 class="text-lg font-bold text-white mb-1">
+                  Stop simulation to add trip
+                </h3>
+                <p class="text-sm text-orange-100">
+                  Click the stop button to add a new journey
+                </p>
             </div>
 
           
-              <!-- Finished Vehicle Overlay - Top center -->
-              <div v-if="showFinishedVehicleOverlay" class="absolute top-4 left-1/2 transform -translate-x-1/2 pointer-events-auto">
-                <div class="bg-green-500 bg-opacity-95 rounded-xl shadow-xl p-4 text-center max-w-md animate-pulse">
-                  <div class="text-2xl mb-2 animate-bounce">
-                    <span>🎯</span>
+              <!-- Finished Vehicle Alert - Now handled by JavaScript alert() -->
           </div>
-                  <h3 class="text-lg font-bold text-white mb-1">
-                    Journey Completed!
-                  </h3>
-                  <p class="text-sm text-green-100">
-                    {{ finishedVehicleMessage }}
-                  </p>
-                </div>
-              </div>
-            </div>
             
               
         <!-- Loading indicator -->
@@ -355,6 +605,27 @@
             <p class="text-lg text-gray-600">Loading SUMO network...</p>
           </div>
           </div>
+
+        <!-- Finished Vehicle Overlay - Arrow pointing to recent journeys -->
+        <div v-if="showFinishedVehicleOverlay" class="absolute top-1/2 right-4 transform -translate-y-1/2 pointer-events-auto z-50 animate-fade-in">
+          <div class="relative">
+            <!-- Arrow pointing to recent journeys section -->
+            <div class="bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
+              Journey #{{ finishedVehicleMessage }} completed - check recent journeys
+            </div>
+            <!-- Arrow pointing left -->
+            <div class="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2">
+              <div class="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-green-500"></div>
+            </div>
+            <!-- Close button -->
+            <button 
+              @click="closeFinishedVehicleOverlay"
+              class="absolute -top-1 -right-1 bg-green-600 hover:bg-green-700 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold transition duration-200"
+            >
+              ×
+            </button>
+          </div>
+        </div>
           </div>
           </div>
         </div>
@@ -397,6 +668,17 @@ export default {
       // Finished vehicle overlay
       showFinishedVehicleOverlay: false,
       finishedVehicleMessage: '',
+      finishedVehicleTimer: null,
+      shownFinishedVehicles: new Set(), // Track which vehicles we've already shown
+      
+      // Legend visibility
+      showLegend: true,
+      legendCollapsed: false,
+      legendAutoFoldTimer: null,
+      
+      // Results tracking
+      vehicleResults: [], // Array of vehicle journey results
+      maxResults: 20, // Maximum number of results to keep
       
       // Route data
       calculatedRoute: null,
@@ -425,7 +707,7 @@ export default {
       vehicleUpdateInterval: null,
       
       // Simulation status
-      simulationTime: '00:00:00:00',
+      simulationTime: 0,
       
       // Route data
       routePath: null,
@@ -1016,14 +1298,23 @@ export default {
           console.error('❌ Validation API error:', validationError)
         }
         
-        // Call the manual API to add vehicle to simulation (bypasses Pydantic validation)
-        const response = await apiService.startJourneyManual(
+        // Call the regular API to add vehicle to simulation
+        const response = await apiService.startJourney(
           this.startPoint.id,
           this.destinationPoint.id,
           routeEdgesArray
         )
         
         console.log('✅ Journey started:', response)
+        
+        // Add vehicle result to local tracking
+        this.addVehicleResult(
+          response.vehicle_id, 
+          response.start_time, 
+          response.start_time_string, 
+          response.distance, 
+          response.predicted_eta
+        )
         
         // Start simulation with additional vehicle
         this.startSimulationPlayback()
@@ -1067,6 +1358,17 @@ export default {
     closeSimulationOverlay() {
       this.showSimulationOverlay = false
       console.log('✅ Simulation overlay closed')
+    },
+    
+    closeFinishedVehicleOverlay() {
+      this.showFinishedVehicleOverlay = false
+      this.finishedVehicleMessage = ''
+      
+      // Clear the auto-close timer if it exists
+      if (this.finishedVehicleTimer) {
+        clearTimeout(this.finishedVehicleTimer)
+        this.finishedVehicleTimer = null
+      }
     },
     
     handleEdgeClick(edge, event) {
@@ -1287,6 +1589,7 @@ export default {
         this.predictedETA = response.predicted_eta
         this.currentPrediction = this.predictedETA
         this.currentVehicleId = response.vehicle_id
+        this.simulationStartTime = Date.now()
         
         // Create route path (simplified straight line for demo)
         const startX = this.startPoint.x
@@ -1301,6 +1604,7 @@ export default {
         this.predictedETA = Math.floor(Math.random() * 20) + 5
         this.currentPrediction = this.predictedETA
         this.currentVehicleId = `vehicle_${Date.now()}`
+        this.simulationStartTime = Date.now()
         
         const startX = this.startPoint.x
         const startY = this.startPoint.y
@@ -1366,9 +1670,12 @@ export default {
           await apiService.completeJourney(this.currentVehicleId, this.actualDuration * 60) // Convert to seconds
         }
         
-        // Load updated results and statistics
-        await this.loadResults()
-        await this.loadStatistics()
+        // Update vehicle result with completion data
+        const endTime = this.simulationTime
+        const actualDuration = this.actualDuration * 60 // Convert to seconds
+        const predictedDuration = this.predictedETA * 60 // Convert to seconds
+        
+        this.updateVehicleResult(this.currentVehicleId, endTime, actualDuration, predictedDuration)
         
       } catch (error) {
         console.error('Error completing journey:', error)
@@ -1498,9 +1805,90 @@ export default {
         const response = await apiService.getSimulationStatus()
         this.simulationStatus = response
         this.isSimulationPlaying = response.is_running || false
-        this.simulationTime = response.simulation_time || '00:00:00:00'
+        
+        // Convert simulation time string to seconds
+        if (response.simulation_time && typeof response.simulation_time === 'string') {
+          const parts = response.simulation_time.split(':')
+          if (parts.length >= 3) {
+            const hours = parseInt(parts[0]) || 0
+            const minutes = parseInt(parts[1]) || 0
+            const secs = parseInt(parts[2]) || 0
+            this.simulationTime = hours * 3600 + minutes * 60 + secs
+          } else {
+            this.simulationTime = 0
+          }
+        } else {
+          this.simulationTime = response.simulation_time || 0
+        }
+        
+        // Debug logging for simulation time
+        console.log('🕐 Simulation Time Update:', {
+          'raw_response': response,
+          'simulation_time_raw': response.simulation_time,
+          'simulation_time_type': typeof response.simulation_time,
+          'simulationTime_parsed': this.simulationTime,
+          'isSimulationPlaying': this.isSimulationPlaying,
+          'note': 'This should match vehicle start times when journeys are added'
+        })
       } catch (error) {
         console.error('Error loading simulation status:', error)
+      }
+    },
+
+    async loadResults() {
+      try {
+        // Load results from API
+        const response = await apiService.getSimulationResults(this.maxResults)
+        this.vehicleResults = response.results || []
+        console.log('📊 Results loaded:', this.vehicleResults.length)
+      } catch (error) {
+        console.error('❌ Failed to load results:', error)
+        this.vehicleResults = []
+      }
+    },
+    
+    addVehicleResult(vehicleId, startTime, startTimeString, distance, predictedEta) {
+      const result = {
+        vehicle_id: vehicleId,
+        start_time: startTime,
+        start_time_string: startTimeString,
+        distance: distance,
+        predicted_eta: predictedEta,
+        status: 'running',
+        end_time: null,
+        end_time_string: null,
+        actual_duration: null,
+        absolute_error: null,
+        accuracy: null
+      }
+      
+      // Add to beginning of array (most recent first)
+      this.vehicleResults.unshift(result)
+      
+      // Keep only maxResults
+      if (this.vehicleResults.length > this.maxResults) {
+        this.vehicleResults = this.vehicleResults.slice(0, this.maxResults)
+      }
+      
+      console.log('📊 Vehicle result added:', result)
+    },
+    
+    updateVehicleResult(vehicleId, endTime, actualDuration, predictedDuration) {
+      const result = this.vehicleResults.find(r => r.vehicle_id === vehicleId)
+      if (result) {
+        result.status = 'finished'
+        result.end_time = endTime
+        result.end_time_string = this.formatTime(endTime)
+        result.actual_duration = actualDuration
+        
+        // Calculate error and accuracy
+        const absoluteError = Math.abs(predictedDuration - actualDuration)
+        const accuracy = actualDuration > 0 ? Math.max(0, 100 - (absoluteError / actualDuration) * 100) : 0
+        
+        result.absolute_error = absoluteError
+        result.accuracy = accuracy
+        
+        console.log('📊 Vehicle result updated:', result)
       }
     },
     
@@ -1520,15 +1908,14 @@ export default {
       // Load vehicles immediately
       this.loadActiveVehicles()
       
-      // Set up interval for real-time updates only when simulation is playing
+      // Set up interval for real-time updates
       this.vehicleUpdateInterval = setInterval(() => {
         if (this.isSimulationPlaying) {
           this.loadActiveVehicles()
-          this.checkFinishedVehicles()
         }
+        // Always check for finished vehicles regardless of simulation state
+        this.checkFinishedVehicles()
       }, 1000) // Update every second
-      
-      console.log('🚗 Started vehicle updates')
     },
     
     stopVehicleUpdates() {
@@ -1539,22 +1926,144 @@ export default {
       }
     },
     
+    startLegendAutoFold() {
+      // Clear any existing timer
+      if (this.legendAutoFoldTimer) {
+        clearTimeout(this.legendAutoFoldTimer)
+      }
+      
+      // Set timer to collapse legend after 10 seconds
+      this.legendAutoFoldTimer = setTimeout(() => {
+        this.legendCollapsed = true
+        console.log('🕐 Legend auto-folded after 10 seconds')
+      }, 10000)
+    },
+    
+    resetLegendAutoFold() {
+      // Clear existing timer
+      if (this.legendAutoFoldTimer) {
+        clearTimeout(this.legendAutoFoldTimer)
+      }
+      
+      // Start new timer
+      this.startLegendAutoFold()
+    },
+    
+    toggleLegend() {
+      this.legendCollapsed = !this.legendCollapsed
+      
+      // Reset auto-fold timer when user manually toggles
+      this.resetLegendAutoFold()
+    },
+    
+    
+    async refreshResults() {
+      await this.loadResults()
+      console.log('🔄 Refreshed results')
+    },
+
+    clearAllResults() {
+      this.vehicleResults = []
+      console.log('🗑️ All results cleared')
+    },
+
+    addHiddenCommandListener() {
+      // Hidden command: Ctrl+Shift+D to clear all results
+      console.log('🔧 Hidden command available: Ctrl+Shift+D to clear all results')
+      this.hiddenCommandHandler = (event) => {
+        if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+          event.preventDefault()
+          console.log('🗑️ Hidden command triggered: Clear all results')
+          this.clearAllResults()
+        }
+      }
+      document.addEventListener('keydown', this.hiddenCommandHandler)
+    },
+    
+    scrollToTop() {
+      const resultsContainer = this.$el.querySelector('.overflow-y-auto')
+      if (resultsContainer) {
+        resultsContainer.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    },
+    
+    async updateVehicleResult(vehicleId, endTime, actualDuration, predictedDuration) {
+      // Update local vehicle result
+      const result = this.vehicleResults.find(r => r.vehicle_id === vehicleId)
+      if (result) {
+        result.status = 'finished'
+        result.end_time = endTime
+        result.end_time_string = this.formatTime(endTime)
+        result.actual_duration = actualDuration
+        
+        // Calculate error and accuracy
+        const absoluteError = Math.abs(predictedDuration - actualDuration)
+        const accuracy = actualDuration > 0 ? Math.max(0, 100 - (absoluteError / actualDuration) * 100) : 0
+        
+        result.absolute_error = absoluteError
+        result.accuracy = accuracy
+        
+        console.log('📊 Vehicle result updated:', result)
+      }
+    },
+    
     async checkFinishedVehicles() {
       try {
         const response = await apiService.getFinishedVehicles()
         const finishedVehicles = response.finished_vehicles || []
         
         for (const vehicle of finishedVehicles) {
+          // Skip if we've already shown this vehicle
+          if (this.shownFinishedVehicles.has(vehicle.id)) {
+            continue
+          }
+          
+          const duration = vehicle.end_time - vehicle.start_time
+          let message = `Vehicle ${vehicle.id} finished journey in ${this.formatTime(duration)} (${duration.toFixed(1)}s)`
+          
+          // Add prediction information if available
+          if (vehicle.prediction) {
+            const prediction = vehicle.prediction
+            const predictedDuration = prediction.predicted_travel_time
+            const actualDuration = duration
+            
+            // Update vehicle result with completion data
+            this.updateVehicleResult(vehicle.id, vehicle.end_time, actualDuration, predictedDuration)
+            
+            // Calculate accuracy, handling division by zero
+            let accuracyText = 'N/A'
+            if (actualDuration > 0) {
+              const accuracy = 1.0 - Math.abs(predictedDuration - actualDuration) / actualDuration
+              accuracyText = `${(accuracy * 100).toFixed(1)}%`
+            }
+            
+            message += `\n\n🎯 ETA Prediction Results:`
+            message += `\nPredicted: ${this.formatTime(predictedDuration)} (${predictedDuration.toFixed(1)}s)`
+            message += `\nActual: ${this.formatTime(actualDuration)} (${actualDuration.toFixed(1)}s)`
+            message += `\nAccuracy: ${accuracyText}`
+            message += `\nConfidence: ${(prediction.confidence * 100).toFixed(1)}%`
+            message += `\nDistance: ${prediction.predicted_distance.toFixed(1)}m`
+            message += `\nPredicted Speed: ${(prediction.predicted_speed * 3.6).toFixed(1)} km/h`
+          } else {
+            // Update vehicle result with completion data
+            this.updateVehicleResult(vehicle.id, vehicle.end_time, duration, 0)
+          }
+          
+          // Mark vehicle as shown
+          this.shownFinishedVehicles.add(vehicle.id)
+          
+            // Find the journey number for this vehicle
+            const result = this.vehicleResults.find(r => r.vehicle_id === vehicle.id)
+            const journeyNumber = result ? (this.vehicleResults.length - this.vehicleResults.indexOf(result)) : '?'
+          
+          // Show overlay for finished vehicle
           this.showFinishedVehicleOverlay = true
-          this.finishedVehicleMessage = `Vehicle ${vehicle.id} finished journey in ${this.formatTime(vehicle.end_time - vehicle.start_time)}`
+          this.finishedVehicleMessage = journeyNumber
           
-          console.log('🎯 Vehicle finished:', vehicle)
-          
-          // Hide overlay after 5 seconds
-          setTimeout(() => {
-            this.showFinishedVehicleOverlay = false
-            this.finishedVehicleMessage = ''
-          }, 5000)
+          // Auto-close after 20 seconds
+          this.finishedVehicleTimer = setTimeout(() => {
+            this.closeFinishedVehicleOverlay()
+          }, 20000)
         }
       } catch (error) {
         console.error('Error checking finished vehicles:', error)
@@ -1562,10 +2071,163 @@ export default {
     },
     
     formatTime(seconds) {
-      const hours = Math.floor(seconds / 3600)
-      const minutes = Math.floor((seconds % 3600) / 60)
-      const secs = seconds % 60
+      // Handle both string and number inputs
+      let totalSeconds = seconds
+      
+      if (typeof seconds === 'string') {
+        // Parse string format "HH:MM:SS:MS" or "HH:MM:SS"
+        const parts = seconds.split(':')
+        if (parts.length >= 3) {
+          const hours = parseInt(parts[0]) || 0
+          const minutes = parseInt(parts[1]) || 0
+          const secs = parseInt(parts[2]) || 0
+          totalSeconds = hours * 3600 + minutes * 60 + secs
+        } else {
+          totalSeconds = 0
+        }
+      }
+      
+      // Ensure it's a valid number
+      if (isNaN(totalSeconds) || totalSeconds < 0) {
+        totalSeconds = 0
+      }
+      
+      const hours = Math.floor(totalSeconds / 3600)
+      const minutes = Math.floor((totalSeconds % 3600) / 60)
+      const secs = Math.floor(totalSeconds % 60)
+      
       return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    },
+    
+    formatTimeWithDay(seconds) {
+      // Handle both string and number inputs
+      let totalSeconds = seconds
+      
+      if (typeof seconds === 'string') {
+        // Parse string format "HH:MM:SS:MS" or "HH:MM:SS"
+        const parts = seconds.split(':')
+        if (parts.length >= 3) {
+          const hours = parseInt(parts[0]) || 0
+          const minutes = parseInt(parts[1]) || 0
+          const secs = parseInt(parts[2]) || 0
+          totalSeconds = hours * 3600 + minutes * 60 + secs
+        } else {
+          totalSeconds = 0
+        }
+      }
+      
+      // Ensure it's a valid number
+      if (isNaN(totalSeconds) || totalSeconds < 0) {
+        totalSeconds = 0
+      }
+      
+      // Calculate day of week (0 = Monday)
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      const dayIndex = Math.floor(totalSeconds / 86400) % 7  // 86400 seconds = 1 day
+      const day = days[dayIndex]
+      
+      // Calculate time within the day
+      const hours = Math.floor((totalSeconds % 86400) / 3600)
+      const minutes = Math.floor((totalSeconds % 3600) / 60)
+      const secs = Math.floor(totalSeconds % 60)
+      
+      return `${day} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    },
+    
+    calculateDuration(startTimeString, endTimeString) {
+      try {
+        // Parse start time string (HH:MM:SS)
+        const startParts = startTimeString.split(':')
+        const startHours = parseInt(startParts[0]) || 0
+        const startMinutes = parseInt(startParts[1]) || 0
+        const startSeconds = parseInt(startParts[2]) || 0
+        const startTotalSeconds = startHours * 3600 + startMinutes * 60 + startSeconds
+        
+        // Parse end time string (HH:MM:SS)
+        const endParts = endTimeString.split(':')
+        const endHours = parseInt(endParts[0]) || 0
+        const endMinutes = parseInt(endParts[1]) || 0
+        const endSeconds = parseInt(endParts[2]) || 0
+        const endTotalSeconds = endHours * 3600 + endMinutes * 60 + endSeconds
+        
+        // Calculate duration
+        const durationSeconds = endTotalSeconds - startTotalSeconds
+        
+        // Format duration as HH:MM:SS
+        const hours = Math.floor(durationSeconds / 3600)
+        const minutes = Math.floor((durationSeconds % 3600) / 60)
+        const secs = durationSeconds % 60
+        
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+      } catch (error) {
+        console.error('Error calculating duration:', error)
+        return '00:00:00'
+      }
+    },
+    
+    calculateError(result) {
+      try {
+        if (result.status !== 'finished') return 0
+        
+        // Calculate estimated duration from start time and ETA
+        const estimatedDuration = this.calculateDurationSeconds(result.start_time_string, this.formatTime(result.predicted_eta))
+        
+        // Calculate actual duration from start time and end time
+        const actualDuration = this.calculateDurationSeconds(result.start_time_string, result.end_time_string)
+        
+        // Return absolute difference in seconds
+        return Math.abs(estimatedDuration - actualDuration)
+      } catch (error) {
+        console.error('Error calculating error:', error)
+        return 0
+      }
+    },
+    
+    calculateAccuracy(result) {
+      try {
+        if (result.status !== 'finished') return 0
+        
+        // Calculate estimated duration from start time and ETA
+        const estimatedDuration = this.calculateDurationSeconds(result.start_time_string, this.formatTime(result.predicted_eta))
+        
+        // Calculate actual duration from start time and end time
+        const actualDuration = this.calculateDurationSeconds(result.start_time_string, result.end_time_string)
+        
+        if (actualDuration === 0) return 0
+        
+        // Calculate error
+        const error = Math.abs(estimatedDuration - actualDuration)
+        
+        // Calculate accuracy as percentage
+        return Math.max(0, 100 - (error / actualDuration) * 100)
+      } catch (error) {
+        console.error('Error calculating accuracy:', error)
+        return 0
+      }
+    },
+    
+    calculateDurationSeconds(startTimeString, endTimeString) {
+      try {
+        // Parse start time string (HH:MM:SS)
+        const startParts = startTimeString.split(':')
+        const startHours = parseInt(startParts[0]) || 0
+        const startMinutes = parseInt(startParts[1]) || 0
+        const startSeconds = parseInt(startParts[2]) || 0
+        const startTotalSeconds = startHours * 3600 + startMinutes * 60 + startSeconds
+        
+        // Parse end time string (HH:MM:SS)
+        const endParts = endTimeString.split(':')
+        const endHours = parseInt(endParts[0]) || 0
+        const endMinutes = parseInt(endParts[1]) || 0
+        const endSeconds = parseInt(endParts[2]) || 0
+        const endTotalSeconds = endHours * 3600 + endMinutes * 60 + endSeconds
+        
+        // Return duration in seconds
+        return endTotalSeconds - startTotalSeconds
+      } catch (error) {
+        console.error('Error calculating duration in seconds:', error)
+        return 0
+      }
     },
     
     
@@ -1625,24 +2287,60 @@ export default {
     }
   },
   
+  watch: {
+    showFinishedVehicleOverlay(newVal) {
+      // Overlay state changed
+    }
+  },
+  
   async mounted() {
-    console.log('🚀 DemoPage mounted - starting data loading...')
     await this.loadNetworkData()
     await this.loadSimulationStatus()
+    await this.loadResults()
+    
+    // Clear any old finished vehicles to prevent showing stale data on page refresh
+    try {
+      await apiService.clearFinishedVehicles()
+      console.log('🧹 Cleared old finished vehicles on page load')
+    } catch (error) {
+      console.warn('⚠️ Could not clear finished vehicles:', error)
+    }
+    
     this.startVehicleUpdates()
     this.startSimulationUpdates() // Start simulation status updates
-    console.log('✅ DemoPage mounted - data loading completed')
+    
+    // Start legend auto-fold timer
+    this.startLegendAutoFold()
+    
+    // Add hidden command listener
+    this.addHiddenCommandListener()
   },
   
   beforeUnmount() {
     if (this.animationInterval) {
       clearInterval(this.animationInterval)
     }
+    
+    // Clean up finished vehicle timer
+    if (this.finishedVehicleTimer) {
+      clearTimeout(this.finishedVehicleTimer)
+      this.finishedVehicleTimer = null
+    }
     if (this.simulationUpdateInterval) {
       clearInterval(this.simulationUpdateInterval)
     }
+    
+    // Clean up legend auto-fold timer
+    if (this.legendAutoFoldTimer) {
+      clearTimeout(this.legendAutoFoldTimer)
+      this.legendAutoFoldTimer = null
+    }
+    
     this.stopVehicleUpdates()
     this.stopSimulationUpdates() // Stop simulation updates
+    
+    // Remove hidden command listener
+    document.removeEventListener('keydown', this.hiddenCommandHandler)
   }
 }
 </script>
@@ -1700,6 +2398,36 @@ export default {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Hide scrollbar for webkit browsers */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Performance optimizations for journey cards */
+.will-change-transform {
+  will-change: transform;
+}
+
+/* Smooth scrolling for journey results */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* Optimize hover effects */
+.hover\:bg-slate-750:hover {
+  background-color: rgb(51 65 85 / 0.8);
+}
+
+/* Better focus states for accessibility */
+button:focus {
+  outline: 2px solid rgb(59 130 246);
+  outline-offset: 2px;
 }
 
 </style>

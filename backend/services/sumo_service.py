@@ -2,6 +2,7 @@ import os
 import json
 import threading
 import time
+import uuid
 import xml.etree.ElementTree as ET
 from typing import List, Dict, Tuple, Optional
 from models.entities import Junction, Road, Zone, Vehicle
@@ -97,7 +98,6 @@ class SUMOSimulation:
             
             # Get the maximum step from the data
             self.max_step = max(int(step) for step in self.trips_data.keys())
-            
             print(f"📊 Loaded trips data: {len(self.trips_data)} time steps, max step: {self.max_step}")
             
         except Exception as e:
@@ -112,13 +112,7 @@ class SUMOSimulation:
             return self.trips_data[step_key]
         return []
     
-    def next_step(self):
-        """Move to the next step in the trips data"""
-        self.current_step += 1
-        # if self.current_step > self.max_step:
-        self.current_step = self.current_step % self.max_step # Cycle back to beginning
-        return self.get_trips_for_current_step()
-    
+
     def start_trips_playback(self):
         """Start the trips playback"""
         self.is_playing = True
@@ -172,11 +166,20 @@ class SUMOSimulation:
                 # Advance simulation step (thread-safe)
                 with self.traci_lock:
                     traci.simulationStep()
-                    #read active vehicle from traci and update vehicles_in_route
+
+                # Debug: Show which vehicles were removed
                 self.vehicles_in_route = set([v["id"] for v in self.get_active_vehicles().get("vehicles", [])])
                 
-                # Check user-defined vehicles for completion
-                self._check_user_defined_vehicles(traci)
+                # Debug: Log vehicle tracking state
+                if self.user_defined_vehicles:
+                    # Check user-defined vehicles for completion
+                    self._check_user_defined_vehicles(traci)
+                
+                    print(f"🔍 Step {self.current_step}: {len(self.vehicles_in_route)} vehicles in route")
+                    print(f"🔍 User-defined vehicles: {list(self.user_defined_vehicles.keys())}")
+                    for vid in self.user_defined_vehicles.keys():
+                        in_route = vid in self.vehicles_in_route
+                        print(f"🔍   {vid}: {'IN' if in_route else 'OUT'} of route")
                 
                 # Move to next step (with cycling)
                 self.current_step += 1
@@ -206,11 +209,28 @@ class SUMOSimulation:
         """Check if user-defined vehicles have finished their journey"""
         vehicles_to_remove = []
         
+        # Check user-defined vehicles for completion        
         for vehicle_id, vehicle_data in self.user_defined_vehicles.items():
             try:
+                # Only check for completion after the delay period
+                with self.traci_lock:
+                    traci_time = traci.simulation.getTime()
+                    # Check if enough time has passed since vehicle was added (use simulation step)
+                    if self.current_step <= vehicle_data.get('start_time', 0):
+                        continue
+                    
+                    # Also check if we're past the check_after_step
+                    if self.current_step <= vehicle_data.get('check_after_step', 0):
+                        continue
+                
                 # Check if vehicle is still in the simulation
-                if vehicle_id not in self.vehicles_in_route:
+                is_in_route = vehicle_id in self.vehicles_in_route
+                print(f"🔍 Vehicle {vehicle_id} in route: {is_in_route}")
+                
+                if not is_in_route:
                     # Vehicle has finished its journey
+                    print(f"🎯 Vehicle {vehicle_id} finished! Adding to finished vehicles...")
+                    
                     vehicle_data['end_time'] = self.current_step
                     
                     # Calculate travel distance (simplified - could be enhanced)
@@ -222,9 +242,34 @@ class SUMOSimulation:
                     # Mark for removal from tracking
                     vehicles_to_remove.append(vehicle_id)
                     
-                    print(f"🎯 Vehicle {vehicle_id} finished journey at step {self.current_step}")
+                    duration = vehicle_data['end_time'] - vehicle_data['start_time']
+                    print(f"🎯 Vehicle {vehicle_id} finished journey at simulation step {self.current_step}")
                     print(f"📊 Travel distance: {vehicle_data['travel_distance']:.2f}m")
-                    print(f"⏱️ Journey duration: {vehicle_data['end_time'] - vehicle_data['start_time']} steps")
+                    print(f"⏱️ Journey duration: {duration:.2f} seconds ({duration/60:.2f} minutes)")
+                    
+                    # Show prediction accuracy if prediction exists
+                    if 'prediction' in vehicle_data:
+                        prediction = vehicle_data['prediction']
+                        predicted_duration = prediction['predicted_travel_time']
+                        actual_duration = duration
+                        
+                        # Calculate accuracy, handling division by zero
+                        if actual_duration > 0:
+                            accuracy = 1.0 - abs(predicted_duration - actual_duration) / actual_duration
+                        else:
+                            accuracy = 0.0  # Can't calculate accuracy for zero duration
+                        
+                        print(f"🎯 Prediction Accuracy:")
+                        print(f"   Predicted: {predicted_duration:.1f}s")
+                        print(f"   Actual: {actual_duration:.1f}s")
+                        if actual_duration > 0:
+                            print(f"   Accuracy: {accuracy:.2f} ({accuracy*100:.1f}%)")
+                        else:
+                            print(f"   Accuracy: N/A (actual duration was 0s)")
+                        print(f"   Confidence: {prediction['confidence']:.2f}")
+                    
+                    print(f"📋 Finished vehicles count: {len(self.finished_vehicles)}")
+                    print(f"🎯 DEBUG: Added vehicle {vehicle_id} to finished_vehicles list")
                     
             except Exception as e:
                 print(f"❌ Error checking vehicle {vehicle_id}: {e}")
@@ -232,6 +277,7 @@ class SUMOSimulation:
         # Remove finished vehicles from tracking
         for vehicle_id in vehicles_to_remove:
             del self.user_defined_vehicles[vehicle_id]
+            print(f"🗑️ Removed finished vehicle {vehicle_id} from tracking")
     
     def _calculate_travel_distance(self, path_edges):
         """Calculate total travel distance for a path"""
@@ -241,11 +287,99 @@ class SUMOSimulation:
                 total_distance += self.roads[edge_id].length
         return total_distance
     
+    def predict_eta(self, vehicle_id, start_edge, end_edge, route_edges, current_time):
+        """
+        Dummy ETA prediction function - will be replaced with ML model later
+        
+        Args:
+            vehicle_id: ID of the vehicle
+            start_edge: Starting edge ID
+            end_edge: Destination edge ID  
+            route_edges: List of edges in the route
+            current_time: Current simulation time
+            
+        Returns:
+            dict: Prediction result with ETA and confidence
+        """
+        try:
+            # Calculate total route distance
+            total_distance = self._calculate_travel_distance(route_edges)
+            
+            # Dummy prediction logic - simple distance-based calculation
+            # Assume average speed of 30 km/h (8.33 m/s) for normal roads
+            # Add some randomness to simulate real-world variability
+            import random
+            base_speed = 8.33  # m/s
+            speed_factor = random.uniform(0.7, 1.3)  # 70% to 130% of base speed
+            predicted_speed = base_speed * speed_factor
+            
+            # Calculate predicted travel time
+            predicted_travel_time = total_distance / predicted_speed
+            
+            # Add some congestion factor based on route length
+            congestion_factor = 1.0 + (len(route_edges) * 0.05)  # 5% per edge
+            predicted_travel_time *= congestion_factor
+            
+            # Calculate predicted arrival time
+            predicted_arrival_time = current_time + predicted_travel_time
+            
+            # Generate confidence score (80-95%)
+            confidence = random.uniform(0.8, 0.95)
+            
+            prediction_result = {
+                'vehicle_id': vehicle_id,
+                'predicted_eta': predicted_arrival_time,
+                'predicted_travel_time': predicted_travel_time,
+                'predicted_distance': total_distance,
+                'predicted_speed': predicted_speed,
+                'confidence': confidence,
+                'prediction_method': 'dummy_distance_based',
+                'created_at': current_time
+            }
+            
+            print(f"🎯 ETA Prediction for {vehicle_id}:")
+            print(f"   Distance: {total_distance:.1f}m")
+            print(f"   Predicted Speed: {predicted_speed:.1f} m/s")
+            print(f"   Predicted Travel Time: {predicted_travel_time:.1f}s")
+            print(f"   Predicted ETA: {predicted_arrival_time:.1f}s")
+            print(f"   Confidence: {confidence:.2f}")
+            
+            return prediction_result
+            
+        except Exception as e:
+            print(f"❌ Error in ETA prediction for {vehicle_id}: {e}")
+            # Return a fallback prediction
+            return {
+                'vehicle_id': vehicle_id,
+                'predicted_eta': current_time + 60.0,  # 1 minute fallback
+                'predicted_travel_time': 60.0,
+                'predicted_distance': 0.0,
+                'predicted_speed': 0.0,
+                'confidence': 0.5,
+                'prediction_method': 'fallback',
+                'created_at': current_time,
+                'error': str(e)
+            }
+    
     def get_finished_vehicles(self):
-        """Get finished user-defined vehicles and clear the list"""
+        """Get finished user-defined vehicles"""
         finished = self.finished_vehicles.copy()
-        self.finished_vehicles.clear()  # Clear after returning to avoid duplicates
+        # Don't clear immediately - let vehicles stay in the list for a while
+        # The frontend will handle multiple notifications for the same vehicle
         return finished
+    
+    def clear_finished_vehicles(self):
+        """Clear all finished vehicles"""
+        self.finished_vehicles.clear()
+        print("🧹 Cleared all finished vehicles")
+    
+    def get_vehicle_prediction(self, vehicle_id):
+        """Get prediction for a specific vehicle"""
+        if vehicle_id in self.user_defined_vehicles:
+            vehicle_data = self.user_defined_vehicles[vehicle_id]
+            if 'prediction' in vehicle_data:
+                return vehicle_data['prediction']
+        return None
     
     def process_trips_for_step(self, trips):
         """Process trips for the current step - add vehicles to simulation using TraCI"""
@@ -266,8 +400,12 @@ class SUMOSimulation:
     
     def _add_vehicle_to_traci(self, trip):
         """Add vehicle to SUMO simulation using TraCI"""
-        vehicle_id = trip.get('vehicle_id') 
-        route_id = trip.get('route_id') 
+        # Generate unique vehicle ID to avoid collisions
+        vehicle_unique_suffix = str(uuid.uuid4())[:8]
+        base_vehicle_id = trip.get('vehicle_id', 'vehicle')
+        vehicle_id = f"{base_vehicle_id}_{vehicle_unique_suffix}"
+        base_route_id = trip.get('route_id', 'route')
+        route_id = f"{base_route_id}_{vehicle_unique_suffix}"
         full_route_edges = trip.get('full_route_edges') 
         type = trip.get('type') 
         depart = trip.get('depart') 
@@ -296,7 +434,6 @@ class SUMOSimulation:
                     departSpeed=0,
                     departLane="0"
                 )
-                print(f"🔍 DEBUG: Vehicle {vehicle_id} added successfully")
                 
                 # Subscribe to vehicle updates
                 traci.vehicle.subscribe(vehicle_id, [tc.VAR_ROAD_ID, tc.VAR_POSITION, tc.VAR_SPEED])
@@ -307,9 +444,6 @@ class SUMOSimulation:
             # Track stagnant vehicles based on JSON data
             if is_stagnant:
                 self.stagnant_vehicles.add(vehicle_id)
-                print(f"🚗 Added STAGNANT vehicle {vehicle_id} to TraCI simulation (Type: {type})")
-            else:
-                print(f"🚗 Added vehicle {vehicle_id} to TraCI simulation (Type: {type})")
             
         except Exception as e:
             print(f"❌ Failed to add vehicle {vehicle_id} to TraCI: {e}")
@@ -512,20 +646,20 @@ class SUMOSimulation:
             "simulation_type": "endless",
             "simulation_time": self.get_simulation_time()
         }
-    
-    def get_simulation_time(self):
+        
+    def get_simulation_time(self, offset=0):
         """
-        Convert simulation step to DD:HH:MM:SS format
+        Convert simulation step to HH:MM:SS format
         """
         # Assuming 1 step = 1 second in simulation time
-        total_seconds = self.current_step
+        total_seconds = int(self.current_step + offset)
         
-        days = total_seconds // 86400
-        hours = (total_seconds % 86400) // 3600
+        hours = total_seconds // 3600
         minutes = (total_seconds % 3600) // 60
         seconds = total_seconds % 60
         
-        return f"{days:02d}:{hours:02d}:{minutes:02d}:{seconds:02d}"
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    
 
     def get_active_vehicles(self):
         """
@@ -563,7 +697,7 @@ class SUMOSimulation:
                         
                     except Exception as e:
                         print(f"❌ Error getting vehicle {vehicle_id}: {e}")
-                    continue
+                        continue
                 
                 # Return vehicles data
                 return {"vehicles": vehicles_data}
@@ -641,12 +775,10 @@ class SUMOSimulation:
     # Placeholder methods for API compatibility
     def add_vehicle(self, route):
         """Add a vehicle to the simulation"""
-        vehicle_id = f"veh_{len(self.vehicles)}"
+        vehicle_unique_suffix = str(uuid.uuid4())[:8]
+        vehicle_id = f"veh_{vehicle_unique_suffix}"
         return vehicle_id
 
-    def predict_eta(self, vehicle_id, end_coords):
-        """Predict ETA for a vehicle"""
-        return 300.0  # 5 minutes
 
     def get_route_distance(self, start_coords, end_coords):
         """Calculate route distance"""
@@ -696,8 +828,19 @@ class SUMOSimulation:
             
             # Use TraCI routing
             with self.traci_lock:
+                # Check if TraCI is connected and simulation is running
+                try:
+                    traci.simulation.getMinExpectedNumber()
+                except Exception as e:
+                    print(f"❌ TraCI not connected for route calculation: {e}")
+                    return {"error": f"TraCI not connected: {e}"}
+                
                 # Try to use TraCI routing
-                route_result = traci.simulation.findRoute(start_edge, end_edge)
+                try:
+                    route_result = traci.simulation.findRoute(start_edge, end_edge)
+                except Exception as route_error:
+                    print(f"❌ TraCI route calculation failed: {route_error}")
+                    return {"error": f"Route calculation failed: {route_error}"}
                 
                 if route_result and route_result.edges:
                     edge_list = list(route_result.edges)
@@ -743,36 +886,29 @@ class SUMOSimulation:
         """Add a vehicle to the simulation for a specific journey"""
         try:
             # Generate unique vehicle ID
-            vehicle_id = f"journey_vehicle_{int(time.time() * 1000)}"
+            vehicle_unique_suffix = str(uuid.uuid4())[:8]
+            vehicle_id = f"journey_vehicle_{vehicle_unique_suffix}"
             
             # Create route from the calculated route edges
             route_str = " ".join(route_edges)
             
             print(f"🚗 Adding journey vehicle {vehicle_id}")
             print(f"🛣️ Route: {route_str}")
-            print(f"🔍 Start edge: {start_edge}")
-            print(f"🔍 End edge: {end_edge}")
-            print(f"🔍 Route edges: {route_edges}")
-            print(f"🔍 Route edges type: {type(route_edges)}")
-            print(f"🔍 Route edges length: {len(route_edges) if route_edges else 'None'}")
-            print(f"🔍 Available roads: {len(self.roads)}")
-            print(f"🔍 Start edge in roads: {start_edge in self.roads}")
-            if start_edge in self.roads:
-                road = self.roads[start_edge]
-                print(f"🔍 Road object: {type(road)}")
-                print(f"🔍 Road attributes: {dir(road)}")
-                if hasattr(road, 'length'):
-                    print(f"🔍 Road length: {road.length}")
             
             # Validate route edges
             if not route_edges or not isinstance(route_edges, list):
                 raise Exception(f"Invalid route edges: {route_edges}")
             
             # Check if all route edges exist in the network
+            missing_edges = []
             for edge_id in route_edges:
                 if edge_id not in self.roads:
+                    missing_edges.append(edge_id)
                     print(f"⚠️ Route edge {edge_id} not found in network")
-                    # Don't fail, just warn
+            
+            if missing_edges:
+                raise Exception(f"Route contains invalid edges: {missing_edges}")
+            
             
             with self.traci_lock:
                 # Check if TraCI is connected
@@ -783,45 +919,71 @@ class SUMOSimulation:
                     print(f"❌ TraCI connection error: {e}")
                     raise Exception(f"TraCI not connected: {e}")
                 
-                # Create route first
-                route_id = f"route_{vehicle_id}_{start_edge}_{end_edge}_{int(time.time() * 1000)}"
-                traci.route.add(routeID=route_id, edges=route_edges)
+                # Create route first with truly unique ID
+                unique_suffix = str(uuid.uuid4())[:8]  # Use first 8 chars of UUID for uniqueness
+                route_id = f"route_{vehicle_id}_{start_edge}_{end_edge}_{unique_suffix}"
+                try:
+                    traci.route.add(routeID=route_id, edges=route_edges)
+                    print(f"✅ Route {route_id} created successfully")
+                except Exception as route_error:
+                    print(f"❌ Failed to create route {route_id}: {route_error}")
+                    print(f"❌ Route edges: {route_edges}")
+                    raise Exception(f"Could not add route '{route_id}': {route_error}")
 
                 # Depart time needs to be in jumps of 30 steps for example if current step is 100, then depart time should be 120
                 current_time = traci.simulation.getTime()
                 depart_time = current_time + 30 - current_time % 30
                 
+                # Calculate simulation step equivalent for consistency
+                simulation_step_depart_time = self.current_step + 30 - self.current_step % 30
+                route_distance = self._calculate_travel_distance(route_edges)
                 # Depart pos needs to be the center of the road
                 if start_edge in self.roads and hasattr(self.roads[start_edge], 'length'):
                     depart_pos = self.roads[start_edge].length / 2.2
                 else:
-                    # Fallback: use a default position (middle of edge)
+                    # Fallback: use a default position 
                     print(f"⚠️ Road {start_edge} not found or no length attribute, using default position")
-                    depart_pos = 0.5  # Middle of the edge
+                    depart_pos = 0 
                 
                 # Add vehicle to simulation FIRST
-                traci.vehicle.add(
-                    vehID=vehicle_id,
-                    routeID=route_id,
-                    typeID="user_defined",
-                    depart=depart_time,  # Use current time instead of trip depart time
-                    departPos=depart_pos,
-                    departSpeed=0,
-                    departLane="0"
-                )
+                try:
+                    traci.vehicle.add(
+                        vehID=vehicle_id,
+                        routeID=route_id,
+                        typeID="user_defined",
+                        depart=depart_time,  # Use current time instead of trip depart time
+                        departPos=depart_pos,
+                        departSpeed=0,
+                        departLane="0"
+                    )
+                    print(f"✅ Vehicle {vehicle_id} added to simulation successfully")
+                except Exception as vehicle_error:
+                    print(f"❌ Failed to add vehicle {vehicle_id}: {vehicle_error}")
+                    raise Exception(f"Could not add vehicle '{vehicle_id}': {vehicle_error}")
                 traci.vehicle.subscribe(vehicle_id, [tc.VAR_ROAD_ID, tc.VAR_POSITION, tc.VAR_SPEED])
+                start_time_string = self.get_simulation_time(offset=30-self.current_step%30)
+                print(f"🚗 Vehicle {vehicle_id} added to TraCI with route {route_id} at {start_time_string}")
+                print(f"🚗 Depart time: {depart_time}, Depart pos: {depart_pos}")
             
             # Add to tracking
             self.vehicles_in_route.add(vehicle_id)
-            
             # Track user-defined vehicle
             self.user_defined_vehicles[vehicle_id] = {
                 'id': vehicle_id,
                 'path': route_edges,
-                'travel_distance': 0.0,  # Will be updated during simulation
-                'start_time': self.current_step,
-                'end_time': None
+                'travel_distance': route_distance,
+                'start_time': simulation_step_depart_time,  # Use simulation step for consistency with frontend
+                'start_time_string': start_time_string,
+                'end_time': None,
+                'check_after_step': self.current_step + 10  # Don't check for completion until 10 steps later
             }
+            
+            # Generate ETA prediction
+            print(f"🎯 Generating ETA prediction for {vehicle_id}...")
+            prediction = self.predict_eta(vehicle_id, start_edge, end_edge, route_edges, self.current_step)
+            
+            # Store prediction in vehicle tracking data
+            self.user_defined_vehicles[vehicle_id]['prediction'] = prediction
             
             print(f"✅ Journey vehicle {vehicle_id} added to simulation and tracking")
             return vehicle_id

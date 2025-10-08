@@ -124,40 +124,6 @@ async def stop_simulation():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/simulation/start-journey")
-async def start_journey(
-    start: Dict[str, float],
-    end: Dict[str, float]
-):
-    """Start a new journey with ETA prediction"""
-    try:
-        start_coords = (start["x"], start["y"])
-        end_coords = (end["x"], end["y"])
-        
-        # Create a simple route (in real implementation, this would use SUMO routing)
-        route = ["edge1", "edge2", "edge3", "edge4", "edge5"]
-        
-        # Add vehicle to simulation
-        vehicle_id = sumo_simulation.add_vehicle(route)
-        if not vehicle_id:
-            raise HTTPException(status_code=400, detail="Failed to add vehicle")
-        
-        # Predict ETA
-        predicted_eta = sumo_simulation.predict_eta(vehicle_id, end_coords)
-        
-        # Calculate distance
-        distance = sumo_simulation.get_route_distance(start_coords, end_coords)
-        
-        return {
-            "vehicle_id": vehicle_id,
-            "predicted_eta": predicted_eta,
-            "distance": distance,
-            "start": start_coords,
-            "end": end_coords
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/simulation/vehicle/{vehicle_id}/position")
 async def get_vehicle_position(vehicle_id: str):
@@ -172,35 +138,60 @@ async def get_vehicle_position(vehicle_id: str):
     }
 
 @app.post("/api/simulation/complete-journey")
-async def complete_journey(
-    vehicle_id: str,
-    actual_duration: float
-):
+async def complete_journey(vehicle_id: str, actual_duration: float):
     """Complete a journey and save results"""
     try:
-        # Get vehicle data
-        vehicles = sumo_simulation.get_all_vehicles()
-        vehicle = next((v for v in vehicles if v["id"] == vehicle_id), None)
-        
-        if not vehicle:
+        # Get vehicle data from simulation
+        vehicle_data = sumo_simulation.user_defined_vehicles.get(vehicle_id)
+        if not vehicle_data:
             raise HTTPException(status_code=404, detail="Vehicle not found")
         
-        # For demo purposes, use simple coordinates
-        start_coords = (0, 0)
-        end_coords = (1000, 0)
-        distance = 1000.0
+        # Calculate metrics
+        current_time = sumo_simulation.current_step
+        end_time_string = sumo_simulation.get_simulation_time()
         
-        # Return result without database saving
+        # Get prediction data
+        prediction = vehicle_data.get('prediction', {})
+        predicted_eta = prediction.get('predicted_eta', 0)
+        start_time = vehicle_data.get('start_time', 0)
+        
+        # Calculate predicted duration (ETA - start_time)
+        predicted_duration = predicted_eta - start_time
+        
+        # Calculate actual duration (current_time - start_time)
+        actual_duration_calculated = current_time - start_time
+        
+        # Use the provided actual_duration if it's reasonable, otherwise use calculated
+        if actual_duration > 0 and abs(actual_duration - actual_duration_calculated) < 60:  # Within 1 minute
+            final_actual_duration = actual_duration
+        else:
+            final_actual_duration = actual_duration_calculated
+        
+        # Calculate error as difference between predicted and actual duration
+        absolute_error = abs(predicted_duration - final_actual_duration)
+        accuracy = max(0, 100 - (absolute_error / final_actual_duration) * 100) if final_actual_duration > 0 else 0
+        
+        # Update vehicle data
+        vehicle_data['end_time'] = current_time
+        vehicle_data['end_time_string'] = end_time_string
+        vehicle_data['actual_duration'] = final_actual_duration
+        vehicle_data['absolute_error'] = absolute_error
+        vehicle_data['accuracy'] = accuracy
+        vehicle_data['status'] = 'finished'
+        
+        print(f"✅ Journey {vehicle_id} completed")
+        
         return {
             "vehicle_id": vehicle_id,
-            "start": start_coords,
-            "end": end_coords,
-            "predicted_eta": vehicle.get("predicted_eta", 0),
-            "actual_duration": actual_duration,
-            "distance": distance
+            "predicted_eta": predicted_eta,
+            "actual_duration": final_actual_duration,
+            "absolute_error": absolute_error,
+            "accuracy": accuracy,
+            "distance": vehicle_data.get('travel_distance', 0)
         }
         
     except Exception as e:
+        print(f"❌ API: Error completing journey: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Database endpoints removed - using in-memory only
@@ -208,8 +199,30 @@ async def complete_journey(
 @app.get("/api/simulation/results")
 async def get_simulation_results(limit: int = 10):
     """Get recent simulation results"""
-    # Return empty results since we don't have database
-    return {"results": []}
+    try:
+        finished_vehicles = sumo_simulation.get_finished_vehicles()
+        # Convert to the format expected by frontend
+        results = []
+        for vehicle in finished_vehicles[:limit]:
+            result = {
+                "vehicle_id": vehicle.get("id", ""),
+                "start_time": vehicle.get("start_time", 0),
+                "start_time_string": vehicle.get("start_time_string", "00:00:00"),
+                "distance": vehicle.get("travel_distance", 0),
+                "predicted_eta": vehicle.get("prediction", {}).get("predicted_eta", 0),
+                "status": "finished",
+                "end_time": vehicle.get("end_time", 0),
+                "end_time_string": vehicle.get("end_time_string", "00:00:00"),
+                "actual_duration": vehicle.get("actual_duration", 0),
+                "absolute_error": vehicle.get("absolute_error", 0),
+                "accuracy": vehicle.get("accuracy", 0)
+            }
+            results.append(result)
+        
+        return {"results": results}
+    except Exception as e:
+        print(f"❌ API: Error getting simulation results: {e}")
+        return {"results": []}
 
 @app.get("/api/simulation/vehicles/finished")
 async def get_finished_vehicles():
@@ -217,6 +230,27 @@ async def get_finished_vehicles():
     try:
         finished_vehicles = sumo_simulation.get_finished_vehicles()
         return {"finished_vehicles": finished_vehicles}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/simulation/vehicles/finished/clear")
+async def clear_finished_vehicles():
+    """Clear all finished vehicles"""
+    try:
+        sumo_simulation.clear_finished_vehicles()
+        return {"message": "Finished vehicles cleared successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/simulation/vehicles/{vehicle_id}/prediction")
+async def get_vehicle_prediction(vehicle_id: str):
+    """Get ETA prediction for a specific vehicle"""
+    try:
+        prediction = sumo_simulation.get_vehicle_prediction(vehicle_id)
+        if prediction:
+            return {"prediction": prediction}
+        else:
+            return {"prediction": None, "message": "Vehicle not found or no prediction available"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -332,8 +366,20 @@ async def start_journey(request: JourneyRequest):
             request.route_edges
         )
         
+        # Get vehicle data for response
+        vehicle_data = sumo_simulation.user_defined_vehicles.get(vehicle_id, {})
+        prediction = vehicle_data.get('prediction', {}).get('predicted_eta', 0)
         print(f"✅ API: Vehicle {vehicle_id} added to simulation")
-        return {"vehicle_id": vehicle_id, "status": "started"}
+        print(f"🕐 Start time: {vehicle_data.get('start_time', 0)}, Start time string: {vehicle_data.get('start_time_string', 'N/A')}")
+        
+        return {
+            "vehicle_id": vehicle_id, 
+            "status": "started",
+            "start_time": vehicle_data.get('start_time', 0),
+            "start_time_string": vehicle_data.get('start_time_string', '00:00:00'),
+            "distance": vehicle_data.get('travel_distance', 0),
+            "predicted_eta": prediction
+        }
     except Exception as e:
         print(f"❌ API: Journey start error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -362,7 +408,18 @@ async def start_journey_manual(request: dict):
             )
             
             print(f"✅ MANUAL: Vehicle {vehicle_id} added to simulation")
-            return {"vehicle_id": vehicle_id, "status": "started"}
+            
+            # Get the full vehicle data including prediction
+            vehicle_data = sumo_simulation.user_defined_vehicles.get(vehicle_id, {})
+            
+            return {
+                "vehicle_id": vehicle_id, 
+                "status": "started",
+                "start_time": vehicle_data.get('start_time', 0),
+                "distance": vehicle_data.get('travel_distance', 0),
+                "predicted_eta": vehicle_data.get('prediction', {}).get('predicted_eta', 0),
+                "route_edges": journey_request.route_edges
+            }
             
         except Exception as validation_error:
             print(f"❌ MANUAL: Pydantic validation failed: {validation_error}")

@@ -100,6 +100,10 @@ class ApiService {
     return this.get('/api/simulation/vehicles/finished')
   }
 
+  async clearFinishedVehicles() {
+    return this.post('/api/simulation/vehicles/finished/clear')
+  }
+
   async startSimulation() {
     return this.post('/api/simulation/start')
   }
@@ -130,9 +134,6 @@ class ApiService {
   }
 
 
-  async completeJourney(vehicleId, actualDuration) {
-    return this.post(`/api/simulation/complete-journey?vehicle_id=${vehicleId}&actual_duration=${actualDuration}`)
-  }
 
   async calculateRoute(startX, startY, endX, endY) {
     return this.post(`/api/simulation/calculate-route?start_x=${startX}&start_y=${startY}&end_x=${endX}&end_y=${endY}`)
