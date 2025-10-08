@@ -742,3 +742,101 @@ def get_duration_histogram_plot_data(db: Session, category: str = 'all'):
             "category": category,
             "bins": []
         }
+
+def get_distance_histogram_plot_data(db: Session, category: str = 'all'):
+    """Get data for Trip Distance vs MAE Histogram"""
+    try:
+        # Get all finished journeys with their data
+        finished_journeys = db.query(Journey).filter(
+            Journey.status == 'finished',
+            Journey.actual_duration > 0,
+            Journey.predicted_eta > 0
+        ).all()
+        
+        if not finished_journeys:
+            return {
+                "data_points": [],
+                "total_journeys": 0,
+                "x_axis": "MAE (seconds)",
+                "y_axis": "Frequency",
+                "title": f"Trip Distance vs MAE Histogram - {category.title()}",
+                "category": category,
+                "bins": []
+            }
+        
+        # Filter by category if specified (based on distance in meters)
+        if category != 'all':
+            if category == 'short':
+                filtered_journeys = [j for j in finished_journeys if j.distance < 4000]  # < 4km
+            elif category == 'medium':
+                filtered_journeys = [j for j in finished_journeys if 4000 <= j.distance <= 11000]  # 4-11km
+            elif category == 'long':
+                filtered_journeys = [j for j in finished_journeys if j.distance > 11000]  # > 11km
+            else:
+                filtered_journeys = finished_journeys
+        else:
+            filtered_journeys = finished_journeys
+        
+        if not filtered_journeys:
+            return {
+                "data_points": [],
+                "total_journeys": 0,
+                "x_axis": "MAE (seconds)",
+                "y_axis": "Frequency",
+                "title": f"Trip Distance vs MAE Histogram - {category.title()}",
+                "category": category,
+                "bins": []
+            }
+        
+        # Calculate MAE for each journey
+        mae_values = []
+        for journey in filtered_journeys:
+            predicted_duration = journey.predicted_eta - journey.start_time
+            actual_duration = journey.actual_duration
+            mae = abs(predicted_duration - actual_duration)
+            mae_values.append(mae)
+        
+        # Create histogram bins
+        import numpy as np
+        
+        # Define bin edges (0 to max MAE, with 20 bins)
+        max_mae = max(mae_values) if mae_values else 100
+        bin_edges = np.linspace(0, max_mae, 21)  # 20 bins
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+        
+        # Calculate histogram
+        hist, _ = np.histogram(mae_values, bins=bin_edges)
+        
+        # Convert to data points
+        data_points = []
+        for i, (center, count) in enumerate(zip(bin_centers, hist)):
+            data_points.append({
+                "bin_center": float(center),
+                "count": int(count),
+                "bin_start": float(bin_edges[i]),
+                "bin_end": float(bin_edges[i + 1]),
+                "label": f"{bin_edges[i]:.1f}-{bin_edges[i + 1]:.1f}s"
+            })
+        
+        return {
+            "data_points": data_points,
+            "total_journeys": len(filtered_journeys),
+            "x_axis": "MAE (seconds)",
+            "y_axis": "Frequency",
+            "title": f"Trip Distance vs MAE Histogram - {category.title()}",
+            "category": category,
+            "bins": bin_edges.tolist(),
+            "mae_values": mae_values  # For debugging
+        }
+        
+    except Exception as e:
+        print(f"Error getting distance histogram plot data: {e}")
+        return {
+            "data_points": [],
+            "total_journeys": 0,
+            "x_axis": "MAE (seconds)",
+            "y_axis": "Frequency",
+            "title": f"Trip Distance vs MAE Histogram - {category.title()}",
+            "category": category,
+            "bins": []
+        }

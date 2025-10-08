@@ -302,6 +302,14 @@ class ApiService {
     return this.get(`/api/journeys/plot-image/duration-histogram/${category}`)
   }
 
+  async getDistanceHistogramPlotData(category) {
+    return this.get(`/api/journeys/plot-data/distance-histogram/${category}`)
+  }
+
+  async getDistanceHistogramPlotImage(category) {
+    return this.get(`/api/journeys/plot-image/distance-histogram/${category}`)
+  }
+
   async seedRandomJourneys() {
     return this.post('/api/admin/seed-data')
   }

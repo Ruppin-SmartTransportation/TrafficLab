@@ -370,7 +370,7 @@
                 <div class="flex items-center justify-between p-4 border-b border-slate-700 bg-slate-800">
                   <h3 class="text-sm font-semibold text-slate-100 flex items-center">
                     <span class="mr-2 text-green-400">📈</span>
-                    Statistics
+                    Model Performance Analysis
                   </h3>
                 </div>
                 
@@ -520,7 +520,7 @@
                         <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
                              @click="openPlotWindow('duration-histogram-short')">
                           <div class="text-xs text-slate-400 mb-1 font-medium">Short</div>
-                          <div class="text-xs text-slate-300">5s bins</div>
+                          <div class="text-xs text-slate-300">Duration</div>
                           <div class="text-xs text-slate-500 mt-1">📊</div>
                         </div>
                         
@@ -528,7 +528,7 @@
                         <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
                              @click="openPlotWindow('duration-histogram-medium')">
                           <div class="text-xs text-slate-400 mb-1 font-medium">Medium</div>
-                          <div class="text-xs text-slate-300">5s bins</div>
+                          <div class="text-xs text-slate-300">Duration</div>
                           <div class="text-xs text-slate-500 mt-1">📊</div>
                         </div>
                         
@@ -536,7 +536,7 @@
                         <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
                              @click="openPlotWindow('duration-histogram-long')">
                           <div class="text-xs text-slate-400 mb-1 font-medium">Long</div>
-                          <div class="text-xs text-slate-300">10s bins</div>
+                          <div class="text-xs text-slate-300">Duration</div>
                           <div class="text-xs text-slate-500 mt-1">📊</div>
                         </div>
                       </div>
@@ -550,7 +550,7 @@
                         <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
                              @click="openPlotWindow('distance-histogram-short')">
                           <div class="text-xs text-slate-400 mb-1 font-medium">Short</div>
-                          <div class="text-xs text-slate-300">5s bins</div>
+                          <div class="text-xs text-slate-300">Distance</div>
                           <div class="text-xs text-slate-500 mt-1">📊</div>
                         </div>
                         
@@ -558,7 +558,7 @@
                         <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
                              @click="openPlotWindow('distance-histogram-medium')">
                           <div class="text-xs text-slate-400 mb-1 font-medium">Medium</div>
-                          <div class="text-xs text-slate-300">5s bins</div>
+                          <div class="text-xs text-slate-300">Distance</div>
                           <div class="text-xs text-slate-500 mt-1">📊</div>
                         </div>
                         
@@ -566,7 +566,7 @@
                         <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
                              @click="openPlotWindow('distance-histogram-long')">
                           <div class="text-xs text-slate-400 mb-1 font-medium">Long</div>
-                          <div class="text-xs text-slate-300">10s bins</div>
+                          <div class="text-xs text-slate-300">Distance</div>
                           <div class="text-xs text-slate-500 mt-1">📊</div>
                         </div>
                       </div>
@@ -851,6 +851,9 @@
                currentPlotType === 'duration-histogram-short' ? 'Short Trips - Duration vs MAE Histogram' :
                currentPlotType === 'duration-histogram-medium' ? 'Medium Trips - Duration vs MAE Histogram' :
                currentPlotType === 'duration-histogram-long' ? 'Long Trips - Duration vs MAE Histogram' :
+               currentPlotType === 'distance-histogram-short' ? 'Short Trips - Distance vs MAE Histogram' :
+               currentPlotType === 'distance-histogram-medium' ? 'Medium Trips - Distance vs MAE Histogram' :
+               currentPlotType === 'distance-histogram-long' ? 'Long Trips - Distance vs MAE Histogram' :
                currentPlotData?.title || 'Plot' }}
           </h3>
           <button 
@@ -864,7 +867,7 @@
         </div>
         
         <!-- Plot Content -->
-        <div v-if="currentPlotData && (currentPlotType === 'duration-vs-mae-scatter' || currentPlotType === 'distance-vs-mae-scatter' || currentPlotType === 'mae-by-time' || currentPlotType === 'duration-histogram-short' || currentPlotType === 'duration-histogram-medium' || currentPlotType === 'duration-histogram-long')" class="space-y-2">
+        <div v-if="currentPlotData && (currentPlotType === 'duration-vs-mae-scatter' || currentPlotType === 'distance-vs-mae-scatter' || currentPlotType === 'mae-by-time' || currentPlotType === 'duration-histogram-short' || currentPlotType === 'duration-histogram-medium' || currentPlotType === 'duration-histogram-long' || currentPlotType === 'distance-histogram-short' || currentPlotType === 'distance-histogram-medium' || currentPlotType === 'distance-histogram-long')" class="space-y-2">
           <!-- Matplotlib Plot Image -->
           <div class="bg-slate-900 rounded-lg p-1">
             <div v-if="plotImage" class="w-full h-[calc(95vh-120px)] flex items-center justify-center">
@@ -876,6 +879,9 @@
                        currentPlotType === 'duration-histogram-short' ? 'Short Trips - Duration vs MAE Histogram' :
                        currentPlotType === 'duration-histogram-medium' ? 'Medium Trips - Duration vs MAE Histogram' :
                        currentPlotType === 'duration-histogram-long' ? 'Long Trips - Duration vs MAE Histogram' :
+                       currentPlotType === 'distance-histogram-short' ? 'Short Trips - Distance vs MAE Histogram' :
+                       currentPlotType === 'distance-histogram-medium' ? 'Medium Trips - Distance vs MAE Histogram' :
+                       currentPlotType === 'distance-histogram-long' ? 'Long Trips - Distance vs MAE Histogram' :
                        'Plot'"
                 class="max-w-full max-h-full object-contain"
               />
@@ -2596,30 +2602,25 @@ export default {
             console.error('Error calling getDurationHistogramPlotImage API:', error)
             alert('Error loading plot image. Please try again.')
           }
+        } else if (plotType === 'distance-histogram-short' || plotType === 'distance-histogram-medium' || plotType === 'distance-histogram-long') {
+          try {
+            const category = plotType.split('-')[2] // Extract 'short', 'medium', or 'long'
+            const response = await apiService.getDistanceHistogramPlotImage(category)
+            if (response.success) {
+              this.plotImage = response.image
+              this.currentPlotData = { total_points: response.total_points, total_journeys: response.total_journeys }
+              this.showPlotModal = true
+            } else {
+              console.error('Failed to load plot image:', response)
+              alert('Failed to load plot image. Please try again.')
+            }
+          } catch (error) {
+            console.error('Error calling getDistanceHistogramPlotImage API:', error)
+            alert('Error loading plot image. Please try again.')
+          }
         } else {
           // For other plot types, show placeholder for now
           const plotConfigs = {
-            'distance-histogram-short': {
-              title: 'Short Trips - Distance vs MAE Histogram',
-              type: 'histogram',
-              binSize: '5 seconds',
-              category: 'short',
-              description: 'Error distribution for short distance trips (< 4km)'
-            },
-            'distance-histogram-medium': {
-              title: 'Medium Trips - Distance vs MAE Histogram',
-              type: 'histogram',
-              binSize: '5 seconds',
-              category: 'medium',
-              description: 'Error distribution for medium distance trips (4-11km)'
-            },
-            'distance-histogram-long': {
-              title: 'Long Trips - Distance vs MAE Histogram',
-              type: 'histogram',
-              binSize: '10 seconds',
-              category: 'long',
-              description: 'Error distribution for long distance trips (> 11km)'
-            }
           }
           
           const config = plotConfigs[plotType]
