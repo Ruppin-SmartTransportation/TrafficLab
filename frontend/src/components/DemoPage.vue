@@ -838,11 +838,64 @@
         </div>
       </div>
     </div>
+    
+    <!-- Plot Modal -->
+    <div v-if="showPlotModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="closePlotModal">
+      <div class="bg-slate-800 rounded-lg p-6 max-w-7xl w-full mx-4 max-h-[95vh] overflow-hidden" @click.stop>
+        <!-- Modal Header -->
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-2xl font-semibold text-slate-100">
+            {{ currentPlotData?.title || 'Plot' }}
+          </h3>
+          <button 
+            @click="closePlotModal"
+            class="text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Plot Content -->
+        <div v-if="currentPlotData && currentPlotType === 'duration-vs-mae-scatter'" class="space-y-2">
+          <!-- Matplotlib Plot Image -->
+          <div class="bg-slate-900 rounded-lg p-1">
+            <div v-if="plotImage" class="w-full h-[calc(95vh-120px)] flex items-center justify-center">
+              <img 
+                :src="plotImage" 
+                alt="Trip Duration vs MAE Scatter Plot"
+                class="max-w-full max-h-full object-contain"
+              />
+            </div>
+            
+            <div v-else class="text-center text-slate-500 py-8">
+              No plot image available
+            </div>
+          </div>
+        </div>
+        
+        <!-- Placeholder for other plot types -->
+        <div v-else class="text-center text-slate-400 py-8">
+          Plot type not implemented yet
+        </div>
+      </div>
+    </div>
+    
+    <!-- Seeding Indicator -->
+    <div v-if="showSeedingIndicator" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-slate-800 rounded-lg p-8 text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <div class="text-slate-100 text-lg font-medium">Seeding Random Journeys...</div>
+        <div class="text-slate-400 text-sm mt-2">Please wait while we generate test data</div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import apiService from '../services/api.js'
+// Chart.js will be imported dynamically
 
 export default {
   name: 'DemoPage',
@@ -920,6 +973,20 @@ export default {
           count: 0
         }
       },
+      
+      // Plot modal data
+      showPlotModal: false,
+      currentPlotData: null,
+      currentPlotType: null,
+      chartInstance: null,
+      chartLoading: false,
+      showFallbackTable: false,
+      resizeHandler: null,
+      plotImage: null,
+      
+      // Keyboard shortcuts
+      waitingForO: false,
+      showSeedingIndicator: false,
       
       // Route data
       calculatedRoute: null,
@@ -2483,83 +2550,342 @@ export default {
       }
     },
     
-    openPlotWindow(plotType) {
+    async openPlotWindow(plotType) {
       console.log('📊 Opening plot window for:', plotType)
       
-      // Create plot window based on type
-      const plotConfigs = {
-        'duration-vs-mae-scatter': {
-          title: 'Trip Duration vs MAE Scatter Plot',
-          type: 'scatter',
-          xAxis: 'Trip Duration (seconds)',
-          yAxis: 'MAE (seconds)',
-          description: 'Shows relationship between trip duration and prediction accuracy'
-        },
-        'distance-vs-mae-scatter': {
-          title: 'Trip Distance vs MAE Scatter Plot',
-          type: 'scatter',
-          xAxis: 'Trip Distance (km)',
-          yAxis: 'MAE (seconds)',
-          description: 'Shows relationship between trip distance and prediction accuracy'
-        },
-        'mae-by-time': {
-          title: 'MAE by Time of Day',
-          type: 'bar',
-          xAxis: 'Hour of Day',
-          yAxis: 'MAE (seconds)',
-          description: 'Shows prediction accuracy across different times of day'
-        },
-        'duration-histogram-short': {
-          title: 'Short Trips - Duration vs MAE Histogram',
-          type: 'histogram',
-          binSize: '5 seconds',
-          category: 'short',
-          description: 'Error distribution for short duration trips (< 278s)'
-        },
-        'duration-histogram-medium': {
-          title: 'Medium Trips - Duration vs MAE Histogram',
-          type: 'histogram',
-          binSize: '5 seconds',
-          category: 'medium',
-          description: 'Error distribution for medium duration trips (278-609s)'
-        },
-        'duration-histogram-long': {
-          title: 'Long Trips - Duration vs MAE Histogram',
-          type: 'histogram',
-          binSize: '10 seconds',
-          category: 'long',
-          description: 'Error distribution for long duration trips (> 609s)'
-        },
-        'distance-histogram-short': {
-          title: 'Short Trips - Distance vs MAE Histogram',
-          type: 'histogram',
-          binSize: '5 seconds',
-          category: 'short',
-          description: 'Error distribution for short distance trips (< 4km)'
-        },
-        'distance-histogram-medium': {
-          title: 'Medium Trips - Distance vs MAE Histogram',
-          type: 'histogram',
-          binSize: '5 seconds',
-          category: 'medium',
-          description: 'Error distribution for medium distance trips (4-11km)'
-        },
-        'distance-histogram-long': {
-          title: 'Long Trips - Distance vs MAE Histogram',
-          type: 'histogram',
-          binSize: '10 seconds',
-          category: 'long',
-          description: 'Error distribution for long distance trips (> 11km)'
+      this.currentPlotType = plotType
+      
+      try {
+        // Load plot data based on type
+        if (plotType === 'duration-vs-mae-scatter') {
+          const response = await apiService.getDurationVsMaePlotImage()
+          if (response.success) {
+            this.plotImage = response.image
+            this.currentPlotData = { total_points: response.total_points }
+            this.showPlotModal = true
+          } else {
+            console.error('Failed to load plot image:', response)
+            alert('Failed to load plot image. Please try again.')
+          }
+        } else {
+          // For other plot types, show placeholder for now
+          const plotConfigs = {
+            'distance-vs-mae-scatter': {
+              title: 'Trip Distance vs MAE Scatter Plot',
+              type: 'scatter',
+              xAxis: 'Trip Distance (km)',
+              yAxis: 'MAE (seconds)',
+              description: 'Shows relationship between trip distance and prediction accuracy'
+            },
+            'mae-by-time': {
+              title: 'MAE by Time of Day',
+              type: 'bar',
+              xAxis: 'Hour of Day',
+              yAxis: 'MAE (seconds)',
+              description: 'Shows prediction accuracy across different times of day'
+            },
+            'duration-histogram-short': {
+              title: 'Short Trips - Duration vs MAE Histogram',
+              type: 'histogram',
+              binSize: '5 seconds',
+              category: 'short',
+              description: 'Error distribution for short duration trips (< 278s)'
+            },
+            'duration-histogram-medium': {
+              title: 'Medium Trips - Duration vs MAE Histogram',
+              type: 'histogram',
+              binSize: '5 seconds',
+              category: 'medium',
+              description: 'Error distribution for medium duration trips (278-609s)'
+            },
+            'duration-histogram-long': {
+              title: 'Long Trips - Duration vs MAE Histogram',
+              type: 'histogram',
+              binSize: '10 seconds',
+              category: 'long',
+              description: 'Error distribution for long duration trips (> 609s)'
+            },
+            'distance-histogram-short': {
+              title: 'Short Trips - Distance vs MAE Histogram',
+              type: 'histogram',
+              binSize: '5 seconds',
+              category: 'short',
+              description: 'Error distribution for short distance trips (< 4km)'
+            },
+            'distance-histogram-medium': {
+              title: 'Medium Trips - Distance vs MAE Histogram',
+              type: 'histogram',
+              binSize: '5 seconds',
+              category: 'medium',
+              description: 'Error distribution for medium distance trips (4-11km)'
+            },
+            'distance-histogram-long': {
+              title: 'Long Trips - Distance vs MAE Histogram',
+              type: 'histogram',
+              binSize: '10 seconds',
+              category: 'long',
+              description: 'Error distribution for long distance trips (> 11km)'
+            }
+          }
+          
+          const config = plotConfigs[plotType]
+          if (config) {
+            // Show placeholder for unimplemented plots
+            alert(`${config.title}\n\nType: ${config.type}\nBin Size: ${config.binSize || 'N/A'}\nCategory: ${config.category || 'All'}\n\n${config.description}\n\nX-Axis: ${config.xAxis || 'N/A'}\nY-Axis: ${config.yAxis || 'N/A'}\n\n[This plot will be implemented soon]`)
+          } else {
+            console.warn('Unknown plot type:', plotType)
+          }
         }
+      } catch (error) {
+        console.error('Error loading plot data:', error)
+        alert('Error loading plot data. Please try again.')
+      }
+    },
+    
+    closePlotModal() {
+      this.showPlotModal = false
+      this.currentPlotData = null
+      this.currentPlotType = null
+      this.showFallbackTable = false
+      this.plotImage = null
+      this.destroyChart()
+    },
+    
+    destroyChart() {
+      if (this.chartInstance && window.Plotly) {
+        try {
+          window.Plotly.purge(this.chartInstance)
+        } catch (error) {
+          console.warn('Error purging Plotly chart:', error)
+        }
+        this.chartInstance = null
       }
       
-      const config = plotConfigs[plotType]
-      if (config) {
-        // For now, show an alert with plot details
-        // In a real implementation, this would open a modal or new window with the actual plot
-        alert(`${config.title}\n\nType: ${config.type}\nBin Size: ${config.binSize || 'N/A'}\nCategory: ${config.category || 'All'}\n\n${config.description}\n\nX-Axis: ${config.xAxis || 'N/A'}\nY-Axis: ${config.yAxis || 'N/A'}\n\n[This would open a detailed plot window in a real implementation]`)
-      } else {
-        console.warn('Unknown plot type:', plotType)
+      // Clean up resize listener
+      if (this.resizeHandler) {
+        window.removeEventListener('resize', this.resizeHandler)
+        this.resizeHandler = null
+      }
+    },
+    
+    loadPlotlyJS() {
+      return new Promise((resolve, reject) => {
+        // Check if Plotly is already loaded
+        if (window.Plotly) {
+          console.log('✅ Plotly.js already loaded')
+          resolve()
+          return
+        }
+        
+        console.log('🔄 Loading Plotly.js from CDN...')
+        
+        // Try multiple CDN sources for Plotly
+        const cdnSources = [
+          'https://cdn.plot.ly/plotly-2.26.0.min.js',
+          'https://cdn.jsdelivr.net/npm/plotly.js@2.26.0/dist/plotly.min.js',
+          'https://unpkg.com/plotly.js@2.26.0/dist/plotly.min.js'
+        ]
+        
+        let currentSourceIndex = 0
+        
+        const tryLoadFromCDN = (sourceIndex) => {
+          if (sourceIndex >= cdnSources.length) {
+            reject(new Error('All CDN sources failed to load Plotly.js'))
+            return
+          }
+          
+          const script = document.createElement('script')
+          script.src = cdnSources[sourceIndex]
+          script.async = true
+          script.crossOrigin = 'anonymous'
+          
+          console.log(`🔄 Trying Plotly CDN source ${sourceIndex + 1}: ${cdnSources[sourceIndex]}`)
+          
+          // Set timeout for loading
+          const timeout = setTimeout(() => {
+            console.error(`❌ Plotly.js loading timeout from source ${sourceIndex + 1}`)
+            script.remove()
+            tryLoadFromCDN(sourceIndex + 1)
+          }, 10000) // 10 second timeout per source
+          
+          script.onload = () => {
+            clearTimeout(timeout)
+            console.log(`✅ Plotly.js loaded from CDN source ${sourceIndex + 1}`)
+            // Wait a bit for Plotly to be available
+            setTimeout(() => {
+              if (window.Plotly) {
+                resolve()
+              } else {
+                console.error('❌ Plotly.js loaded but not available on window')
+                script.remove()
+                tryLoadFromCDN(sourceIndex + 1)
+              }
+            }, 100)
+          }
+          
+          script.onerror = (error) => {
+            clearTimeout(timeout)
+            console.error(`❌ Failed to load Plotly.js from CDN source ${sourceIndex + 1}:`, error)
+            script.remove()
+            tryLoadFromCDN(sourceIndex + 1)
+          }
+          
+          // Add to head
+          document.head.appendChild(script)
+        }
+        
+        tryLoadFromCDN(0)
+      })
+    },
+    
+    async createScatterPlot() {
+      if (!this.currentPlotData || !this.currentPlotData.data_points) {
+        return
+      }
+      
+      // Reset states
+      this.destroyChart()
+      this.showFallbackTable = false
+      this.chartLoading = true
+      
+      try {
+        // Load Plotly.js from CDN
+        if (typeof window !== 'undefined' && !window.Plotly) {
+          await this.loadPlotlyJS()
+        }
+        
+        const Plotly = window.Plotly
+        if (!Plotly) {
+          throw new Error('Plotly.js failed to load')
+        }
+        
+        // Wait for DOM to be ready
+        this.$nextTick(() => {
+          const plotDiv = document.getElementById('scatterPlotDiv')
+          if (!plotDiv) {
+            console.error('Plot div element not found')
+            return
+          }
+        
+        // Group data points by category
+        const traces = []
+        const categories = this.currentPlotData.categories || {}
+        
+        // Create traces for each category
+        Object.keys(categories).forEach(category => {
+          const categoryPoints = this.currentPlotData.data_points.filter(point => point.category === category)
+          
+          if (categoryPoints.length > 0) {
+            traces.push({
+              x: categoryPoints.map(point => point.x),
+              y: categoryPoints.map(point => point.y),
+              mode: 'markers',
+              type: 'scatter',
+              name: categories[category].label,
+              marker: {
+                color: categories[category].color,
+                size: 8,
+                opacity: 0.8,
+                line: {
+                  color: '#ffffff',
+                  width: 1
+                }
+              },
+              text: categoryPoints.map(point => 
+                `Journey: ${point.journey_id}<br>` +
+                `Duration: ${point.x.toFixed(1)}s<br>` +
+                `MAE: ${point.y.toFixed(1)}s<br>` +
+                `Distance: ${(point.distance / 1000).toFixed(1)}km<br>` +
+                `Predicted: ${point.predicted_duration.toFixed(1)}s<br>` +
+                `Actual: ${point.actual_duration.toFixed(1)}s`
+              ),
+              hovertemplate: '<b>%{text}</b><extra></extra>'
+            })
+          }
+        })
+        
+        // Create layout
+        const layout = {
+          xaxis: {
+            title: {
+              text: this.currentPlotData.x_axis,
+              font: { color: '#cbd5e1', size: 14 }
+            },
+            color: '#cbd5e1',
+            gridcolor: 'rgba(148, 163, 184, 0.1)',
+            zerolinecolor: 'rgba(148, 163, 184, 0.1)',
+            showgrid: true,
+            zeroline: true,
+            range: [0, 4800], // 0 to 80 minutes in seconds
+            tickmode: 'linear',
+            tick0: 0,
+            dtick: 300, // 5-minute intervals
+            tickformat: '.0f'
+          },
+          yaxis: {
+            title: {
+              text: this.currentPlotData.y_axis,
+              font: { color: '#cbd5e1', size: 14 }
+            },
+            color: '#cbd5e1',
+            gridcolor: 'rgba(148, 163, 184, 0.1)',
+            zerolinecolor: 'rgba(148, 163, 184, 0.1)',
+            showgrid: true,
+            zeroline: true,
+            range: [0, 200], // 0 to 200 seconds
+            tickmode: 'linear',
+            tick0: 0,
+            dtick: 25, // 25-second intervals
+            tickformat: '.0f'
+          },
+          plot_bgcolor: 'rgba(0,0,0,0)',
+          paper_bgcolor: 'rgba(0,0,0,0)',
+          font: { color: '#cbd5e1' },
+          legend: {
+            font: { color: '#cbd5e1' },
+            bgcolor: 'rgba(0,0,0,0)',
+            x: 1,
+            y: 1,
+            xanchor: 'right',
+            yanchor: 'top'
+          },
+          margin: { t: 10, r: 10, b: 80, l: 50 },
+          autosize: true,
+          showlegend: true
+        }
+        
+        // Create config
+        const config = {
+          responsive: true,
+          displayModeBar: true,
+          modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
+          displaylogo: false,
+          autosizable: true,
+          fillFrame: true
+        }
+        
+        // Create the plot
+        Plotly.newPlot(plotDiv, traces, layout, config)
+        
+        // Add resize listener to ensure proper centering
+        const resizeHandler = () => {
+          if (window.Plotly && plotDiv) {
+            window.Plotly.Plots.resize(plotDiv)
+          }
+        }
+        
+        window.addEventListener('resize', resizeHandler)
+        
+        // Store reference for cleanup
+        this.chartInstance = plotDiv
+        this.resizeHandler = resizeHandler
+        })
+      } catch (error) {
+        console.error('Error loading Plotly.js:', error)
+        // Show fallback table view instead of alert
+        this.showFallbackTable = true
+      } finally {
+        this.chartLoading = false
       }
     },
     
@@ -2802,18 +3128,109 @@ export default {
     
     this.startVehicleUpdates()
     this.startSimulationUpdates() // Start simulation status updates
+    this.setupKeyboardShortcuts() // Setup hidden command keyboard shortcut
     
     // Start legend auto-fold timer
     this.startLegendAutoFold()
+  },
+  
+  setupKeyboardShortcuts() {
+    // Add keydown event listener
+    document.addEventListener('keydown', this.handleKeyDown)
+    console.log('🎹 Keyboard shortcuts initialized (Ctrl+Shift+I+O for hidden command)')
+  },
+  
+  handleKeyDown(event) {
+    // Check for Ctrl+Shift+I+O combination
+    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
+      // Start tracking for 'O' key after 'I'
+      this.waitingForO = true
+      console.log('🎹 Detected Ctrl+Shift+I, waiting for O...')
+      return
+    }
     
-    // Add hidden command listener
-    this.addHiddenCommandListener()
+    // If we're waiting for 'O' and it's pressed
+    if (this.waitingForO && event.key.toLowerCase() === 'o') {
+      console.log('🎯 Hidden command triggered: Ctrl+Shift+I+O')
+      this.triggerHiddenCommand()
+      this.waitingForO = false
+      return
+    }
+    
+    // Reset waiting state if any other key is pressed
+    if (this.waitingForO) {
+      this.waitingForO = false
+    }
+  },
+  
+  async triggerHiddenCommand() {
+    try {
+      console.log('🌱 Triggering hidden command: seeding random journeys...')
+      
+      // Show loading indicator
+      this.showSeedingIndicator = true
+      
+      const response = await apiService.seedRandomJourneys()
+      
+      if (response.success) {
+        console.log('✅ Hidden command successful:', response)
+        
+        // Show success notification
+        this.showNotification('success', `Successfully seeded ${response.inserted_count} random journeys!`)
+        
+        // Reload statistics and recent journeys
+        await this.loadJourneyStatistics()
+        await this.loadRecentJourneysFromDB()
+        
+        // Show error statistics
+        if (response.error_statistics) {
+          const stats = response.error_statistics
+          console.log('📊 Error Statistics:')
+          Object.keys(stats).forEach(bin => {
+            const stat = stats[bin]
+            console.log(`  ${bin}: ${stat.count} trips, MAE ${stat.avg_mae}s (target: ${stat.target_mae}s)`)
+          })
+        }
+      } else {
+        console.error('❌ Hidden command failed:', response)
+        this.showNotification('error', 'Failed to seed data. Check console for details.')
+      }
+    } catch (error) {
+      console.error('❌ Error triggering hidden command:', error)
+      this.showNotification('error', 'Error seeding data. Check console for details.')
+    } finally {
+      this.showSeedingIndicator = false
+    }
+  },
+  
+  showNotification(type, message) {
+    // Simple notification system
+    const notification = document.createElement('div')
+    notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg text-white font-medium ${
+      type === 'success' ? 'bg-green-600' : 'bg-red-600'
+    }`
+    notification.textContent = message
+    
+    document.body.appendChild(notification)
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification)
+      }
+    }, 5000)
   },
   
   beforeUnmount() {
     if (this.animationInterval) {
       clearInterval(this.animationInterval)
     }
+    
+    // Clean up keyboard event listener
+    document.removeEventListener('keydown', this.handleKeyDown)
+    
+    // Clean up chart instance
+    this.destroyChart()
     
     // Clean up finished vehicle timer
     if (this.finishedVehicleTimer) {

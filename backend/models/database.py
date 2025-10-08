@@ -419,3 +419,74 @@ def get_journey_statistics(db: Session):
                 "count": 0
             }
         }
+
+def get_duration_vs_mae_plot_data(db: Session):
+    """Get data for Trip Duration vs MAE scatter plot"""
+    try:
+        # Get all finished journeys with their data
+        finished_journeys = db.query(Journey).filter(
+            Journey.status == 'finished',
+            Journey.actual_duration.isnot(None),
+            Journey.predicted_eta.isnot(None)
+        ).all()
+        
+        if not finished_journeys:
+            return {
+                "data_points": [],
+                "total_journeys": 0,
+                "x_axis": "Trip Duration (seconds)",
+                "y_axis": "MAE (seconds)",
+                "title": "Trip Duration vs MAE Scatter Plot"
+            }
+        
+        data_points = []
+        
+        for journey in finished_journeys:
+            # Calculate predicted duration from ETA
+            predicted_duration = journey.predicted_eta - journey.start_time
+            actual_duration = journey.actual_duration
+            
+            # Calculate MAE (absolute error)
+            mae = abs(predicted_duration - actual_duration)
+            
+            # Determine trip category
+            if actual_duration < 278:
+                category = 'short'
+            elif actual_duration <= 609:
+                category = 'medium'
+            else:
+                category = 'long'
+            
+            data_points.append({
+                "x": actual_duration,  # Trip duration in seconds
+                "y": mae,  # MAE in seconds
+                "category": category,
+                "journey_id": journey.vehicle_id,
+                "distance": journey.distance,
+                "predicted_duration": predicted_duration,
+                "actual_duration": actual_duration
+            })
+        
+        return {
+            "data_points": data_points,
+            "total_journeys": len(data_points),
+            "x_axis": "Trip Duration (seconds)",
+            "y_axis": "MAE (seconds)",
+            "title": "Trip Duration vs MAE Scatter Plot",
+            "categories": {
+                "short": {"label": "Short Trips (< 278s)", "color": "#3b82f6"},
+                "medium": {"label": "Medium Trips (278-609s)", "color": "#f59e0b"},
+                "long": {"label": "Long Trips (> 609s)", "color": "#10b981"}
+            }
+        }
+        
+    except Exception as e:
+        print(f"Error getting duration vs MAE plot data: {e}")
+        return {
+            "data_points": [],
+            "total_journeys": 0,
+            "x_axis": "Trip Duration (seconds)",
+            "y_axis": "MAE (seconds)",
+            "title": "Trip Duration vs MAE Scatter Plot",
+            "categories": {}
+        }

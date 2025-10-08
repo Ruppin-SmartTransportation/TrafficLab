@@ -269,6 +269,18 @@ class ApiService {
   async getJourneyStatistics() {
     return this.get('/api/journeys/statistics')
   }
+
+  async getDurationVsMaePlotData() {
+    return this.get('/api/journeys/plot-data/duration-vs-mae')
+  }
+
+  async getDurationVsMaePlotImage() {
+    return this.get('/api/journeys/plot-image/duration-vs-mae')
+  }
+
+  async seedRandomJourneys() {
+    return this.post('/api/admin/seed-data')
+  }
 }
 
 // Export a singleton instance

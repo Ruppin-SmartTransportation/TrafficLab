@@ -340,6 +340,266 @@ async def get_journey_statistics(db: Session = Depends(get_db)):
         print(f"❌ API: Error getting journey statistics: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get journey statistics: {str(e)}")
 
+@app.get("/api/journeys/plot-data/duration-vs-mae")
+async def get_duration_vs_mae_data(db: Session = Depends(get_db)):
+    """Get data for Trip Duration vs MAE scatter plot"""
+    try:
+        from models.database import get_duration_vs_mae_plot_data
+        
+        plot_data = get_duration_vs_mae_plot_data(db)
+        
+        return {
+            "success": True,
+            "plot_data": plot_data
+        }
+    except Exception as e:
+        print(f"❌ API: Error getting duration vs MAE plot data: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get plot data: {str(e)}")
+
+@app.get("/api/journeys/plot-image/duration-vs-mae")
+async def get_duration_vs_mae_plot_image(db: Session = Depends(get_db)):
+    """Generate matplotlib plot image for Trip Duration vs MAE scatter plot"""
+    try:
+        from models.database import get_duration_vs_mae_plot_data
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend
+        import matplotlib.pyplot as plt
+        import io
+        import base64
+        
+        # Get plot data
+        plot_data = get_duration_vs_mae_plot_data(db)
+        
+        if not plot_data.get('data_points'):
+            return {
+                "success": False,
+                "message": "No data available for plotting"
+            }
+        
+        # Create matplotlib figure
+        plt.style.use('dark_background')
+        fig, ax = plt.subplots(figsize=(12, 8))
+        
+        # Define colors for categories
+        colors = {
+            'short': '#3b82f6',    # Blue
+            'medium': '#f59e0b',   # Orange
+            'long': '#10b981'      # Green
+        }
+        
+        # Plot data points by category
+        for category, color in colors.items():
+            category_points = [p for p in plot_data['data_points'] if p['category'] == category]
+            if category_points:
+                x_vals = [p['x'] for p in category_points]
+                y_vals = [p['y'] for p in category_points]
+                
+                # Convert duration from seconds to minutes for display
+                x_vals_minutes = [x / 60 for x in x_vals]
+                
+                ax.scatter(x_vals_minutes, y_vals, 
+                          c=color, 
+                          label=plot_data['categories'][category]['label'],
+                          alpha=0.7, 
+                          s=60,
+                          edgecolors='white',
+                          linewidth=0.5)
+        
+        # Set axis labels and title
+        ax.set_xlabel('Trip Duration (minutes)', fontsize=14, color='white')
+        ax.set_ylabel('MAE (seconds)', fontsize=14, color='white')
+        ax.set_title('Trip Duration vs MAE Scatter Plot', fontsize=16, color='white', pad=20)
+        
+        # Set axis ranges
+        ax.set_xlim(0, 80)  # 0 to 80 minutes
+        ax.set_ylim(0, 200)  # 0 to 200 seconds
+        
+        # Set grid
+        ax.grid(True, alpha=0.3, color='gray')
+        ax.set_facecolor('black')
+        
+        # Set legend
+        ax.legend(loc='upper right', framealpha=0.8)
+        
+        # Set tick colors
+        ax.tick_params(colors='white')
+        
+        # Convert to base64 string
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight', 
+                   facecolor='black', edgecolor='none')
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.getvalue()).decode()
+        plt.close(fig)
+        
+        return {
+            "success": True,
+            "image": f"data:image/png;base64,{image_base64}",
+            "total_points": len(plot_data['data_points'])
+        }
+        
+    except Exception as e:
+        print(f"❌ API: Error generating matplotlib plot: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate plot: {str(e)}")
+
+@app.post("/api/admin/seed-data")
+async def seed_random_journeys(db: Session = Depends(get_db)):
+    """
+    HIDDEN COMMAND: Seed database with 100 random journeys from labels.json
+    Simulates realistic ETA predictions with duration-based error patterns
+    """
+    try:
+        import json
+        import random
+        import numpy as np
+        from datetime import datetime, timedelta
+        from models.database import Journey
+        
+        print("🌱 Starting data seeding process...")
+        
+        # Load labels.json
+        labels_file = "labels.json"
+        if not os.path.exists(labels_file):
+            raise HTTPException(status_code=404, detail="labels.json file not found")
+        
+        print("📖 Loading labels.json...")
+        with open(labels_file, 'r') as f:
+            all_journeys = json.load(f)
+        
+        print(f"📊 Loaded {len(all_journeys)} total journeys from labels.json")
+        
+        # Select 100 random journeys
+        selected_journeys = random.sample(all_journeys, min(100, len(all_journeys)))
+        print(f"🎲 Selected {len(selected_journeys)} random journeys")
+        
+        # Get next journey number
+        last_journey = db.query(Journey).order_by(Journey.journey_number.desc()).first()
+        next_journey_number = (last_journey.journey_number + 1) if last_journey else 1
+        
+        # Error parameters by duration bin
+        error_params = {
+            'short': {'mae': 24.05, 'std': 12.0},    # < 278 seconds
+            'medium': {'mae': 38.31, 'std': 19.0},   # 278-609 seconds  
+            'long': {'mae': 76.90, 'std': 38.0}      # > 609 seconds
+        }
+        
+        inserted_count = 0
+        error_stats = {'short': [], 'medium': [], 'long': []}
+        
+        for i, journey_data in enumerate(selected_journeys):
+            try:
+                # Extract data from labels.json
+                vehicle_id = journey_data['vehicle_id']
+                actual_duration = journey_data['total_travel_time_seconds']
+                distance = journey_data['initial_route_length']
+                origin_edge = journey_data['origin_edge']
+                destination_edge = journey_data['destination_edge']
+                route_edges = journey_data['route']
+                
+                # Determine duration bin and error parameters
+                if actual_duration < 278:
+                    bin_name = 'short'
+                elif actual_duration <= 609:
+                    bin_name = 'medium'
+                else:
+                    bin_name = 'long'
+                
+                error_config = error_params[bin_name]
+                
+                # Generate realistic prediction error
+                # Use normal distribution with mean=0, std based on MAE
+                error_seconds = np.random.normal(0, error_config['std'])
+                
+                # Ensure error is proportional to duration (longer trips can have larger errors)
+                error_scale = min(1.0, actual_duration / 600.0)  # Scale up to 10 minutes
+                error_seconds *= error_scale
+                
+                # Calculate predicted duration
+                predicted_duration = actual_duration + error_seconds
+                predicted_duration = max(1, int(predicted_duration))  # Ensure positive
+                
+                # Calculate actual error for statistics
+                actual_error = abs(predicted_duration - actual_duration)
+                error_stats[bin_name].append(actual_error)
+                
+                # Generate simulation timestamps (simulation steps, not Unix timestamps)
+                # Simulation runs from 6:30 AM (23400 seconds) to 8:00 PM (72000 seconds)
+                # Use random simulation steps within this range
+                start_step = random.randint(23400, 72000)  # Random time between 6:30 AM and 8:00 PM
+                end_step = start_step + actual_duration
+                predicted_eta = start_step + predicted_duration
+                
+                # Convert simulation steps to time strings (HH:MM:SS format)
+                def simulation_step_to_time_string(step):
+                    hours = step // 3600
+                    minutes = (step % 3600) // 60
+                    seconds = step % 60
+                    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                
+                start_time_string = simulation_step_to_time_string(start_step)
+                end_time_string = simulation_step_to_time_string(end_step)
+                
+                # Create journey record
+                journey = Journey(
+                    journey_number=next_journey_number + i,
+                    vehicle_id=vehicle_id,
+                    start_edge=origin_edge,
+                    end_edge=destination_edge,
+                    route_edges=json.dumps(route_edges),
+                    start_time=start_step,
+                    start_time_string=start_time_string,
+                    end_time=end_step,
+                    end_time_string=end_time_string,
+                    distance=distance,
+                    predicted_eta=predicted_eta,
+                    actual_duration=actual_duration,
+                    absolute_error=actual_error,
+                    accuracy=max(0, 100 * (1 - actual_error / actual_duration)) if actual_duration > 0 else 0,
+                    status="finished"
+                )
+                
+                db.add(journey)
+                inserted_count += 1
+                
+                if (i + 1) % 20 == 0:
+                    print(f"📝 Processed {i + 1}/{len(selected_journeys)} journeys...")
+                    
+            except Exception as e:
+                print(f"⚠️ Error processing journey {i}: {e}")
+                continue
+        
+        # Commit all changes
+        db.commit()
+        print(f"✅ Successfully inserted {inserted_count} journeys into database")
+        
+        # Calculate actual error statistics
+        stats_summary = {}
+        for bin_name, errors in error_stats.items():
+            if errors:
+                stats_summary[bin_name] = {
+                    'count': len(errors),
+                    'avg_mae': round(np.mean(errors), 2),
+                    'target_mae': error_params[bin_name]['mae'],
+                    'duration_range': '< 278s' if bin_name == 'short' else '278-609s' if bin_name == 'medium' else '> 609s'
+                }
+        
+        print("📊 Error Statistics:")
+        for bin_name, stats in stats_summary.items():
+            print(f"  {bin_name.capitalize()}: {stats['count']} trips, MAE {stats['avg_mae']}s (target: {stats['target_mae']}s)")
+        
+        return {
+            "success": True,
+            "message": f"Successfully seeded {inserted_count} random journeys",
+            "inserted_count": inserted_count,
+            "error_statistics": stats_summary,
+            "next_journey_number": next_journey_number + inserted_count
+        }
+        
+    except Exception as e:
+        print(f"❌ Error seeding data: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to seed data: {str(e)}")
+
 @app.get("/api/simulation/vehicles/finished")
 async def get_finished_vehicles():
     """Get finished user-defined vehicles"""
