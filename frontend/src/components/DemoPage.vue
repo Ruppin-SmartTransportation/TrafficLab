@@ -847,6 +847,7 @@
           <h3 class="text-2xl font-semibold text-slate-100">
             {{ currentPlotType === 'duration-vs-mae-scatter' ? 'Trip Duration vs MAE Scatter Plot' : 
                currentPlotType === 'distance-vs-mae-scatter' ? 'Trip Distance vs MAE Scatter Plot' : 
+               currentPlotType === 'mae-by-time' ? 'MAE by Time of Day' : 
                currentPlotData?.title || 'Plot' }}
           </h3>
           <button 
@@ -860,13 +861,15 @@
         </div>
         
         <!-- Plot Content -->
-        <div v-if="currentPlotData && (currentPlotType === 'duration-vs-mae-scatter' || currentPlotType === 'distance-vs-mae-scatter')" class="space-y-2">
+        <div v-if="currentPlotData && (currentPlotType === 'duration-vs-mae-scatter' || currentPlotType === 'distance-vs-mae-scatter' || currentPlotType === 'mae-by-time')" class="space-y-2">
           <!-- Matplotlib Plot Image -->
           <div class="bg-slate-900 rounded-lg p-1">
             <div v-if="plotImage" class="w-full h-[calc(95vh-120px)] flex items-center justify-center">
               <img 
                 :src="plotImage" 
-                :alt="currentPlotType === 'duration-vs-mae-scatter' ? 'Trip Duration vs MAE Scatter Plot' : 'Trip Distance vs MAE Scatter Plot'"
+                :alt="currentPlotType === 'duration-vs-mae-scatter' ? 'Trip Duration vs MAE Scatter Plot' : 
+                       currentPlotType === 'distance-vs-mae-scatter' ? 'Trip Distance vs MAE Scatter Plot' : 
+                       'MAE by Time of Day Bar Chart'"
                 class="max-w-full max-h-full object-contain"
               />
             </div>
@@ -2555,16 +2558,24 @@ export default {
             console.error('Error calling getDistanceVsMaePlotImage API:', error)
             alert('Error loading plot image. Please try again.')
           }
+        } else if (plotType === 'mae-by-time') {
+          try {
+            const response = await apiService.getMaeByTimePlotImage()
+            if (response.success) {
+              this.plotImage = response.image
+              this.currentPlotData = { total_points: response.total_points }
+              this.showPlotModal = true
+            } else {
+              console.error('Failed to load plot image:', response)
+              alert('Failed to load plot image. Please try again.')
+            }
+          } catch (error) {
+            console.error('Error calling getMaeByTimePlotImage API:', error)
+            alert('Error loading plot image. Please try again.')
+          }
         } else {
           // For other plot types, show placeholder for now
           const plotConfigs = {
-            'mae-by-time': {
-              title: 'MAE by Time of Day',
-              type: 'bar',
-              xAxis: 'Hour of Day',
-              yAxis: 'MAE (seconds)',
-              description: 'Shows prediction accuracy across different times of day'
-            },
             'duration-histogram-short': {
               title: 'Short Trips - Duration vs MAE Histogram',
               type: 'histogram',

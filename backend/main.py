@@ -546,6 +546,105 @@ async def get_distance_vs_mae_plot_image(db: Session = Depends(get_db)):
         print(f"❌ API: Error generating matplotlib plot: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to generate plot: {str(e)}")
 
+@app.get("/api/journeys/plot-data/mae-by-time")
+async def get_mae_by_time_data(db: Session = Depends(get_db)):
+    """Get data for MAE by Time of Day bar chart"""
+    try:
+        from models.database import get_mae_by_time_plot_data
+        
+        plot_data = get_mae_by_time_plot_data(db)
+        
+        return {
+            "success": True,
+            "plot_data": plot_data
+        }
+    except Exception as e:
+        print(f"❌ API: Error getting MAE by time plot data: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get plot data: {str(e)}")
+
+@app.get("/api/journeys/plot-image/mae-by-time")
+async def get_mae_by_time_plot_image(db: Session = Depends(get_db)):
+    """Generate matplotlib plot image for MAE by Time of Day bar chart"""
+    try:
+        from models.database import get_mae_by_time_plot_data
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend
+        import matplotlib.pyplot as plt
+        import io
+        import base64
+        
+        # Get plot data
+        plot_data = get_mae_by_time_plot_data(db)
+        
+        if not plot_data.get('data_points'):
+            return {
+                "success": False,
+                "message": "No data available for plotting"
+            }
+        
+        # Create matplotlib figure
+        plt.style.use('dark_background')
+        fig, ax = plt.subplots(figsize=(14, 8))
+        
+        # Extract data for plotting
+        hours = [point['hour'] for point in plot_data['data_points']]
+        mae_values = [point['mae'] for point in plot_data['data_points']]
+        counts = [point['count'] for point in plot_data['data_points']]
+        
+        # Create bar chart
+        bars = ax.bar(hours, mae_values, 
+                     color='#3b82f6', 
+                     alpha=0.8,
+                     edgecolor='white',
+                     linewidth=0.5)
+        
+        # Add count labels on top of bars (only for bars with data)
+        for i, (bar, count) in enumerate(zip(bars, counts)):
+            if count > 0:
+                height = bar.get_height()
+                ax.text(bar.get_x() + bar.get_width()/2., height + 0.5,
+                       f'n={count}', 
+                       ha='center', va='bottom',
+                       fontsize=8, color='white')
+        
+        # Set axis labels and title
+        ax.set_xlabel('Hour of Day', fontsize=14, color='white')
+        ax.set_ylabel('Average MAE (seconds)', fontsize=14, color='white')
+        ax.set_title('MAE by Time of Day', fontsize=16, color='white', pad=20)
+        
+        # Set x-axis to show all hours
+        ax.set_xticks(range(0, 24))
+        ax.set_xticklabels([f'{h:02d}:00' for h in range(24)], rotation=45)
+        
+        # Set y-axis range
+        max_mae = max(mae_values) if mae_values else 0
+        ax.set_ylim(0, max_mae * 1.1 if max_mae > 0 else 10)
+        
+        # Set grid
+        ax.grid(True, alpha=0.3, color='gray', axis='y')
+        ax.set_facecolor('black')
+        
+        # Set tick colors
+        ax.tick_params(colors='white')
+        
+        # Convert to base64 string
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight',
+                   facecolor='black', edgecolor='none')
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.getvalue()).decode()
+        plt.close(fig)
+        
+        return {
+            "success": True,
+            "image": f"data:image/png;base64,{image_base64}",
+            "total_points": len(plot_data['data_points'])
+        }
+        
+    except Exception as e:
+        print(f"❌ API: Error generating matplotlib plot: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate plot: {str(e)}")
+
 @app.post("/api/admin/seed-data")
 async def seed_random_journeys(db: Session = Depends(get_db)):
     """
@@ -627,9 +726,9 @@ async def seed_random_journeys(db: Session = Depends(get_db)):
                 error_stats[bin_name].append(actual_error)
                 
                 # Generate simulation timestamps (simulation steps, not Unix timestamps)
-                # Simulation runs from 6:30 AM (23400 seconds) to 8:00 PM (72000 seconds)
-                # Use random simulation steps within this range
-                start_step = random.randint(23400, 72000)  # Random time between 6:30 AM and 8:00 PM
+                # Simulation runs for 24 hours (0 to 86400 seconds)
+                # Use random simulation steps across the full day
+                start_step = random.randint(0, 86400)  # Random time across all 24 hours
                 end_step = start_step + actual_duration
                 predicted_eta = start_step + predicted_duration
                 

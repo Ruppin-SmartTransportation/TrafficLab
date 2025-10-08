@@ -562,3 +562,85 @@ def get_distance_vs_mae_plot_data(db: Session):
             "title": "Trip Distance vs MAE Scatter Plot",
             "categories": {}
         }
+
+def get_mae_by_time_plot_data(db: Session):
+    """Get data for MAE by Time of Day bar chart"""
+    try:
+        # Get all finished journeys with their data
+        finished_journeys = db.query(Journey).filter(
+            Journey.status == 'finished',
+            Journey.actual_duration > 0,
+            Journey.predicted_eta > 0
+        ).all()
+        
+        if not finished_journeys:
+            return {
+                "data_points": [],
+                "total_journeys": 0,
+                "x_axis": "Hour of Day",
+                "y_axis": "MAE (seconds)",
+                "title": "MAE by Time of Day"
+            }
+        
+        # Group MAE by hour of day (0-23)
+        hourly_mae = {}
+        hourly_counts = {}
+        
+        for journey in finished_journeys:
+            # Calculate predicted duration from ETA
+            predicted_duration = journey.predicted_eta - journey.start_time
+            actual_duration = journey.actual_duration
+            
+            # Calculate MAE (absolute error)
+            mae = abs(predicted_duration - actual_duration)
+            
+            # Get hour of day from start_time (simulation step)
+            # Convert simulation step to hour (simulation starts at midnight = 0 seconds)
+            hour = journey.start_time // 3600
+            
+            # Initialize hour data if not exists
+            if hour not in hourly_mae:
+                hourly_mae[hour] = 0
+                hourly_counts[hour] = 0
+            
+            # Add MAE to hour total
+            hourly_mae[hour] += mae
+            hourly_counts[hour] += 1
+        
+        # Calculate average MAE for each hour
+        data_points = []
+        for hour in range(24):
+            if hour in hourly_mae and hourly_counts[hour] > 0:
+                avg_mae = hourly_mae[hour] / hourly_counts[hour]
+                data_points.append({
+                    "hour": hour,
+                    "mae": avg_mae,
+                    "count": hourly_counts[hour],
+                    "label": f"{hour:02d}:00"
+                })
+            else:
+                # No data for this hour
+                data_points.append({
+                    "hour": hour,
+                    "mae": 0,
+                    "count": 0,
+                    "label": f"{hour:02d}:00"
+                })
+        
+        return {
+            "data_points": data_points,
+            "total_journeys": len(finished_journeys),
+            "x_axis": "Hour of Day",
+            "y_axis": "MAE (seconds)",
+            "title": "MAE by Time of Day"
+        }
+        
+    except Exception as e:
+        print(f"Error getting MAE by time plot data: {e}")
+        return {
+            "data_points": [],
+            "total_journeys": 0,
+            "x_axis": "Hour of Day",
+            "y_axis": "MAE (seconds)",
+            "title": "MAE by Time of Day"
+        }
