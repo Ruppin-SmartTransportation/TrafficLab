@@ -236,12 +236,34 @@ class ApiService {
       route_edges_type: typeof routeEdges,
       route_edges_is_array: Array.isArray(routeEdges)
     })
-    
+
     return this.post('/api/simulation/start-journey-manual', {
       start_edge: startEdge,
       end_edge: endEdge,
       route_edges: routeEdges
     })
+  }
+
+  // Journey Database API methods
+
+  async saveJourney(journeyData) {
+    return this.post('/api/journeys/save', journeyData)
+  }
+
+  async getRecentJourneys(limit = 20) {
+    return this.get(`/api/journeys/recent?limit=${limit}`)
+  }
+
+  async deleteLastJourney() {
+    return this.delete('/api/journeys/delete-last')
+  }
+
+  async deleteAllJourneys() {
+    return this.delete('/api/journeys/delete-all')
+  }
+
+  async getJourneyCount() {
+    return this.get('/api/journeys/count')
   }
 }
 

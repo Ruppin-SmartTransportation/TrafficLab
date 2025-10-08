@@ -1313,7 +1313,10 @@ export default {
           response.start_time, 
           response.start_time_string, 
           response.distance, 
-          response.predicted_eta
+          response.predicted_eta,
+          this.startPoint.id,
+          this.destinationPoint.id,
+          routeEdgesArray
         )
         
         // Start simulation with additional vehicle
@@ -1847,13 +1850,16 @@ export default {
       }
     },
     
-    addVehicleResult(vehicleId, startTime, startTimeString, distance, predictedEta) {
+    addVehicleResult(vehicleId, startTime, startTimeString, distance, predictedEta, startEdge = null, endEdge = null, routeEdges = null) {
       const result = {
         vehicle_id: vehicleId,
         start_time: startTime,
         start_time_string: startTimeString,
         distance: distance,
         predicted_eta: predictedEta,
+        start_edge: startEdge,
+        end_edge: endEdge,
+        route_edges: routeEdges,
         status: 'running',
         end_time: null,
         end_time_string: null,
@@ -2004,6 +2010,45 @@ export default {
         result.accuracy = accuracy
         
         console.log('📊 Vehicle result updated:', result)
+        
+        // Save journey to database only after results are displayed
+        try {
+          await this.saveJourneyToDatabase(result)
+        } catch (error) {
+          console.error('❌ Error saving journey to database:', error)
+        }
+      }
+    },
+
+    async saveJourneyToDatabase(journeyResult) {
+      try {
+        // Prepare journey data for database
+        const journeyData = {
+          vehicle_id: journeyResult.vehicle_id,
+          start_edge: journeyResult.start_edge || 'unknown',
+          end_edge: journeyResult.end_edge || 'unknown',
+          route_edges: journeyResult.route_edges || [],
+          start_time: journeyResult.start_time,
+          start_time_string: journeyResult.start_time_string,
+          end_time: journeyResult.end_time,
+          end_time_string: journeyResult.end_time_string,
+          distance: journeyResult.distance,
+          predicted_eta: journeyResult.predicted_eta,
+          actual_duration: journeyResult.actual_duration,
+          absolute_error: journeyResult.absolute_error,
+          accuracy: journeyResult.accuracy,
+          status: journeyResult.status
+        }
+
+        console.log('💾 Saving journey to database:', journeyData)
+        
+        const response = await apiService.saveJourney(journeyData)
+        console.log('✅ Journey saved to database:', response)
+        
+        return response
+      } catch (error) {
+        console.error('❌ Error saving journey to database:', error)
+        throw error
       }
     },
     
