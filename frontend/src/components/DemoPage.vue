@@ -381,19 +381,19 @@
                     <!-- Total Journeys -->
                     <div class="bg-slate-700/50 rounded-lg p-2 text-center">
                       <div class="text-xs text-slate-400 mb-1 font-medium">Total Journeys</div>
-                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.total_journeys }}</div>
+                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.total_journeys || 0 }}</div>
                     </div>
                     
                     <!-- Average Duration -->
                     <div class="bg-slate-700/50 rounded-lg p-2 text-center">
                       <div class="text-xs text-slate-400 mb-1 font-medium">Avg Duration</div>
-                      <div class="text-sm font-bold text-slate-100">{{ formatTime(journeyStatistics.average_duration) }}</div>
+                      <div class="text-sm font-bold text-slate-100">{{ formatTime(journeyStatistics.average_duration || 0) }}</div>
                     </div>
                     
                     <!-- Average Distance -->
                     <div class="bg-slate-700/50 rounded-lg p-2 text-center">
                       <div class="text-xs text-slate-400 mb-1 font-medium">Avg Distance</div>
-                      <div class="text-sm font-bold text-slate-100">{{ (journeyStatistics.average_distance / 1000).toFixed(1) }}km</div>
+                      <div class="text-sm font-bold text-slate-100">{{ ((journeyStatistics.average_distance || 0) / 1000).toFixed(1) }}km</div>
                     </div>
                   </div>
                   
@@ -402,19 +402,19 @@
                     <!-- MAE -->
                     <div class="bg-slate-700/50 rounded-lg p-2 text-center">
                       <div class="text-xs text-slate-400 mb-1 font-medium">MAE</div>
-                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.mae }}s</div>
+                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.mae || 0 }}s</div>
                     </div>
                     
                     <!-- RMSE -->
                     <div class="bg-slate-700/50 rounded-lg p-2 text-center">
                       <div class="text-xs text-slate-400 mb-1 font-medium">RMSE</div>
-                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.rmse }}s</div>
+                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.rmse || 0 }}s</div>
                     </div>
                     
                     <!-- MAPE -->
                     <div class="bg-slate-700/50 rounded-lg p-2 text-center">
                       <div class="text-xs text-slate-400 mb-1 font-medium">MAPE</div>
-                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.mape.toFixed(1) }}%</div>
+                      <div class="text-sm font-bold text-slate-100">{{ (journeyStatistics.mape || 0).toFixed(1) }}%</div>
                     </div>
                   </div>
                   
@@ -428,22 +428,52 @@
                       <!-- Short Trips -->
                       <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Duration: less than 278 seconds">
                         <div class="text-xs text-slate-400 mb-1 font-medium">Short</div>
-                        <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.short_trips.mae }}s</div>
-                        <div class="text-xs text-slate-400">{{ journeyStatistics.short_trips.count }}</div>
+                        <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.short_trips?.mae || 0 }}s</div>
+                        <div class="text-xs text-slate-400">{{ journeyStatistics.short_trips?.count || 0 }}</div>
                       </div>
                       
                       <!-- Medium Trips -->
                       <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Duration: 278 to 609 seconds">
                         <div class="text-xs text-slate-400 mb-1 font-medium">Medium</div>
-                        <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.medium_trips.mae }}s</div>
-                        <div class="text-xs text-slate-400">{{ journeyStatistics.medium_trips.count }}</div>
+                        <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.medium_trips?.mae || 0 }}s</div>
+                        <div class="text-xs text-slate-400">{{ journeyStatistics.medium_trips?.count || 0 }}</div>
                       </div>
                       
                       <!-- Long Trips -->
                       <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Duration: more than 609 seconds">
                         <div class="text-xs text-slate-400 mb-1 font-medium">Long</div>
-                        <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.long_trips.mae }}s</div>
-                        <div class="text-xs text-slate-400">{{ journeyStatistics.long_trips.count }}</div>
+                        <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.long_trips?.mae || 0 }}s</div>
+                        <div class="text-xs text-slate-400">{{ journeyStatistics.long_trips?.count || 0 }}</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Separating Line -->
+                  <div class="border-t border-slate-600 mb-4"></div>
+                  
+                  <!-- Fourth Line: MAE by trip distance -->
+                  <div class="mb-3">
+                    <div class="text-xs text-slate-400 mb-2 font-medium text-center">MAE by trip distance</div>
+                    <div class="grid grid-cols-3 gap-2">
+                      <!-- Short Distance -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Distance: less than 4 kilometers">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">Short</div>
+                        <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.short_trips_distance?.mae || 0 }}s</div>
+                        <div class="text-xs text-slate-400">{{ journeyStatistics.short_trips_distance?.count || 0 }}</div>
+                      </div>
+                      
+                      <!-- Medium Distance -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Distance: 4 to 11 kilometers">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">Medium</div>
+                        <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.medium_trips_distance?.mae || 0 }}s</div>
+                        <div class="text-xs text-slate-400">{{ journeyStatistics.medium_trips_distance?.count || 0 }}</div>
+                      </div>
+                      
+                      <!-- Long Distance -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Distance: more than 11 kilometers">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">Long</div>
+                        <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.long_trips_distance?.mae || 0 }}s</div>
+                        <div class="text-xs text-slate-400">{{ journeyStatistics.long_trips_distance?.count || 0 }}</div>
                       </div>
                     </div>
                   </div>
@@ -779,6 +809,18 @@ export default {
           count: 0
         },
         long_trips: {
+          mae: 0,
+          count: 0
+        },
+        short_trips_distance: {
+          mae: 0,
+          count: 0
+        },
+        medium_trips_distance: {
+          mae: 0,
+          count: 0
+        },
+        long_trips_distance: {
           mae: 0,
           count: 0
         }
@@ -2009,7 +2051,10 @@ export default {
             mape: 0,
             short_trips: { mae: 0, count: 0 },
             medium_trips: { mae: 0, count: 0 },
-            long_trips: { mae: 0, count: 0 }
+            long_trips: { mae: 0, count: 0 },
+            short_trips_distance: { mae: 0, count: 0 },
+            medium_trips_distance: { mae: 0, count: 0 },
+            long_trips_distance: { mae: 0, count: 0 }
           }
         }
       } catch (error) {
@@ -2024,7 +2069,10 @@ export default {
           mape: 0,
           short_trips: { mae: 0, count: 0 },
           medium_trips: { mae: 0, count: 0 },
-          long_trips: { mae: 0, count: 0 }
+          long_trips: { mae: 0, count: 0 },
+          short_trips_distance: { mae: 0, count: 0 },
+          medium_trips_distance: { mae: 0, count: 0 },
+          long_trips_distance: { mae: 0, count: 0 }
         }
       }
     },
@@ -2058,24 +2106,6 @@ export default {
       console.log('📊 Vehicle result added:', result)
     },
     
-    updateVehicleResult(vehicleId, endTime, actualDuration, predictedDuration) {
-      const result = this.vehicleResults.find(r => r.vehicle_id === vehicleId)
-      if (result) {
-        result.status = 'finished'
-        result.end_time = endTime
-        result.end_time_string = this.formatTime(endTime)
-        result.actual_duration = actualDuration
-        
-        // Calculate error and accuracy
-        const absoluteError = Math.abs(predictedDuration - actualDuration)
-        const accuracy = actualDuration > 0 ? Math.max(0, 100 - (absoluteError / actualDuration) * 100) : 0
-        
-        result.absolute_error = absoluteError
-        result.accuracy = accuracy
-        
-        console.log('📊 Vehicle result updated:', result)
-      }
-    },
     
     // Vehicle management methods
     async loadActiveVehicles() {
@@ -2222,6 +2252,9 @@ export default {
     
     async updateVehicleResult(vehicleId, endTime, actualDuration, predictedDuration) {
       // Update local vehicle result
+      console.log('🔍 Looking for vehicle result:', vehicleId)
+      console.log('🔍 Available vehicle results:', this.vehicleResults.map(r => r.vehicle_id))
+      
       const result = this.vehicleResults.find(r => r.vehicle_id === vehicleId)
       if (result) {
         result.status = 'finished'
@@ -2246,6 +2279,9 @@ export default {
         } catch (error) {
           console.error('❌ Error saving journey to database:', error)
         }
+      } else {
+        console.warn('⚠️ Vehicle result not found for vehicle ID:', vehicleId)
+        console.log('📊 Available vehicle results:', this.vehicleResults)
       }
     },
 
@@ -2286,9 +2322,14 @@ export default {
         const response = await apiService.getFinishedVehicles()
         const finishedVehicles = response.finished_vehicles || []
         
+        console.log('🔍 Checking finished vehicles:', finishedVehicles.length)
+        
         for (const vehicle of finishedVehicles) {
+          console.log('🔍 Processing finished vehicle:', vehicle.id)
+          
           // Skip if we've already shown this vehicle
           if (this.shownFinishedVehicles.has(vehicle.id)) {
+            console.log('⏭️ Skipping already shown vehicle:', vehicle.id)
             continue
           }
           
@@ -2325,14 +2366,17 @@ export default {
           
           // Mark vehicle as shown
           this.shownFinishedVehicles.add(vehicle.id)
+          console.log('✅ Marked vehicle as shown:', vehicle.id)
           
             // Find the journey number for this vehicle
             const result = this.vehicleResults.find(r => r.vehicle_id === vehicle.id)
             const journeyNumber = result ? (this.vehicleResults.length - this.vehicleResults.indexOf(result)) : '?'
+            console.log('🔍 Journey number for vehicle:', vehicle.id, 'is', journeyNumber)
           
           // Show overlay for finished vehicle
           this.showFinishedVehicleOverlay = true
           this.finishedVehicleMessage = journeyNumber
+          console.log('🎉 Showing finished vehicle overlay for journey #', journeyNumber)
           
           // Auto-close after 20 seconds
           this.finishedVehicleTimer = setTimeout(() => {

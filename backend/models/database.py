@@ -310,27 +310,47 @@ def get_journey_statistics(db: Session):
         # Calculate MAPE (Mean Absolute Percentage Error)
         mape = sum(absolute_percentage_errors) / len(absolute_percentage_errors) if absolute_percentage_errors else 0
         
-        # Calculate per-bin MAE results
-        short_trips = []
-        medium_trips = []
-        long_trips = []
+        # Calculate per-bin MAE results by duration
+        short_trips_duration = []
+        medium_trips_duration = []
+        long_trips_duration = []
+        
+        # Calculate per-bin MAE results by distance
+        short_trips_distance = []
+        medium_trips_distance = []
+        long_trips_distance = []
         
         for journey in finished_journeys:
             predicted_duration = journey.predicted_eta - journey.start_time
             actual_duration = journey.actual_duration
+            distance_km = journey.distance / 1000  # Convert meters to kilometers
             error = predicted_duration - actual_duration
             
+            # Duration-based bins
             if actual_duration < 278:
-                short_trips.append(error)
+                short_trips_duration.append(error)
             elif actual_duration <= 609:
-                medium_trips.append(error)
+                medium_trips_duration.append(error)
             else:
-                long_trips.append(error)
+                long_trips_duration.append(error)
+            
+            # Distance-based bins
+            if distance_km < 4:
+                short_trips_distance.append(error)
+            elif distance_km <= 11:
+                medium_trips_distance.append(error)
+            else:
+                long_trips_distance.append(error)
         
-        # Calculate MAE for each bin
-        short_mae = sum(abs(e) for e in short_trips) / len(short_trips) if short_trips else 0
-        medium_mae = sum(abs(e) for e in medium_trips) / len(medium_trips) if medium_trips else 0
-        long_mae = sum(abs(e) for e in long_trips) / len(long_trips) if long_trips else 0
+        # Calculate MAE for each duration bin
+        short_mae_duration = sum(abs(e) for e in short_trips_duration) / len(short_trips_duration) if short_trips_duration else 0
+        medium_mae_duration = sum(abs(e) for e in medium_trips_duration) / len(medium_trips_duration) if medium_trips_duration else 0
+        long_mae_duration = sum(abs(e) for e in long_trips_duration) / len(long_trips_duration) if long_trips_duration else 0
+        
+        # Calculate MAE for each distance bin
+        short_mae_distance = sum(abs(e) for e in short_trips_distance) / len(short_trips_distance) if short_trips_distance else 0
+        medium_mae_distance = sum(abs(e) for e in medium_trips_distance) / len(medium_trips_distance) if medium_trips_distance else 0
+        long_mae_distance = sum(abs(e) for e in long_trips_distance) / len(long_trips_distance) if long_trips_distance else 0
         
         return {
             "total_journeys": total_journeys,
@@ -340,16 +360,28 @@ def get_journey_statistics(db: Session):
             "rmse": round(rmse, 2),
             "mape": round(mape, 2),
             "short_trips": {
-                "mae": round(short_mae, 2),
-                "count": len(short_trips)
+                "mae": round(short_mae_duration, 2),
+                "count": len(short_trips_duration)
             },
             "medium_trips": {
-                "mae": round(medium_mae, 2),
-                "count": len(medium_trips)
+                "mae": round(medium_mae_duration, 2),
+                "count": len(medium_trips_duration)
             },
             "long_trips": {
-                "mae": round(long_mae, 2),
-                "count": len(long_trips)
+                "mae": round(long_mae_duration, 2),
+                "count": len(long_trips_duration)
+            },
+            "short_trips_distance": {
+                "mae": round(short_mae_distance, 2),
+                "count": len(short_trips_distance)
+            },
+            "medium_trips_distance": {
+                "mae": round(medium_mae_distance, 2),
+                "count": len(medium_trips_distance)
+            },
+            "long_trips_distance": {
+                "mae": round(long_mae_distance, 2),
+                "count": len(long_trips_distance)
             }
         }
         
@@ -371,6 +403,18 @@ def get_journey_statistics(db: Session):
                 "count": 0
             },
             "long_trips": {
+                "mae": 0,
+                "count": 0
+            },
+            "short_trips_distance": {
+                "mae": 0,
+                "count": 0
+            },
+            "medium_trips_distance": {
+                "mae": 0,
+                "count": 0
+            },
+            "long_trips_distance": {
                 "mae": 0,
                 "count": 0
             }

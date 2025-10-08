@@ -314,7 +314,7 @@ class SUMOSimulation:
             predicted_speed = base_speed * speed_factor
             
             # Calculate predicted travel time
-            predicted_travel_time = total_distance / predicted_speed
+            predicted_travel_time = total_distance / (predicted_speed * 2)
             
             # Add some congestion factor based on route length
             congestion_factor = 1.0 + (len(route_edges) * 0.05)  # 5% per edge
