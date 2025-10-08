@@ -8,6 +8,7 @@ import json
 
 from services.sumo_service import SUMOSimulation
 from models.database import SessionLocal, Journey, get_db
+from sqlalchemy.orm import Session
 
 class RouteRequest(BaseModel):
     start_edge: str
@@ -224,6 +225,104 @@ async def get_simulation_results(limit: int = 10):
     except Exception as e:
         print(f"❌ API: Error getting simulation results: {e}")
         return {"results": []}
+
+# Journey API endpoints
+
+@app.post("/api/journeys/save")
+async def save_journey(journey_data: dict, db: Session = Depends(get_db)):
+    """Save a journey to the database"""
+    try:
+        from models.database import create_journey
+        
+        # Create the journey in the database
+        journey = create_journey(db, journey_data)
+        
+        return {
+            "success": True,
+            "message": "Journey saved successfully",
+            "journey_id": journey.id,
+            "journey_number": journey.journey_number
+        }
+    except Exception as e:
+        print(f"❌ API: Error saving journey: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save journey: {str(e)}")
+
+@app.get("/api/journeys/recent")
+async def get_recent_journeys(limit: int = 20, db: Session = Depends(get_db)):
+    """Get recent journeys from the database"""
+    try:
+        from models.database import get_recent_journeys
+        
+        journeys = get_recent_journeys(db, limit)
+        
+        return {
+            "success": True,
+            "journeys": journeys,
+            "count": len(journeys)
+        }
+    except Exception as e:
+        print(f"❌ API: Error getting recent journeys: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get recent journeys: {str(e)}")
+
+@app.delete("/api/journeys/delete-last")
+async def delete_last_journey(db: Session = Depends(get_db)):
+    """Delete the last journey (highest journey number)"""
+    try:
+        from models.database import delete_last_journey
+        
+        deleted_journey = delete_last_journey(db)
+        
+        if deleted_journey:
+            return {
+                "success": True,
+                "message": "Last journey deleted successfully",
+                "deleted_journey_number": deleted_journey.journey_number
+            }
+        else:
+            return {
+                "success": False,
+                "message": "No journeys found to delete"
+            }
+    except Exception as e:
+        print(f"❌ API: Error deleting last journey: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete last journey: {str(e)}")
+
+@app.delete("/api/journeys/delete-all")
+async def delete_all_journeys(db: Session = Depends(get_db)):
+    """Delete all journeys from the database"""
+    try:
+        from models.database import clear_journeys, get_journey_count
+        
+        # Get count before deletion
+        count_before = get_journey_count(db)
+        
+        # Clear all journeys
+        clear_journeys(db)
+        
+        return {
+            "success": True,
+            "message": f"All {count_before} journeys deleted successfully",
+            "deleted_count": count_before
+        }
+    except Exception as e:
+        print(f"❌ API: Error deleting all journeys: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete all journeys: {str(e)}")
+
+@app.get("/api/journeys/count")
+async def get_journey_count(db: Session = Depends(get_db)):
+    """Get total number of journeys in the database"""
+    try:
+        from models.database import get_journey_count
+        
+        count = get_journey_count(db)
+        
+        return {
+            "success": True,
+            "count": count
+        }
+    except Exception as e:
+        print(f"❌ API: Error getting journey count: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get journey count: {str(e)}")
 
 @app.get("/api/simulation/vehicles/finished")
 async def get_finished_vehicles():
