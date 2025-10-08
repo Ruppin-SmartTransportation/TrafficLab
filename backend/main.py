@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict
@@ -7,6 +7,7 @@ import time
 import json
 
 from services.sumo_service import SUMOSimulation
+from models.database import SessionLocal, Journey, get_db
 
 class RouteRequest(BaseModel):
     start_edge: str
