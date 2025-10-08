@@ -1849,6 +1849,42 @@ export default {
         this.vehicleResults = []
       }
     },
+
+    async loadRecentJourneysFromDB() {
+      try {
+        console.log('📊 Loading recent journeys from database...')
+        const response = await apiService.getRecentJourneys(20)
+        
+        if (response.success && response.journeys) {
+          // Transform database format to frontend format
+          this.vehicleResults = response.journeys.map(journey => ({
+            vehicle_id: journey.vehicle_id,
+            start_time: journey.start_time,
+            start_time_string: journey.start_time_string,
+            end_time: journey.end_time,
+            end_time_string: journey.end_time_string,
+            distance: journey.distance,
+            predicted_eta: journey.predicted_eta,
+            actual_duration: journey.actual_duration,
+            absolute_error: journey.absolute_error,
+            accuracy: journey.accuracy,
+            status: journey.status,
+            start_edge: journey.start_edge,
+            end_edge: journey.end_edge,
+            route_edges: journey.route_edges
+          }))
+          
+          console.log('✅ Recent journeys loaded from database:', this.vehicleResults.length)
+        } else {
+          console.log('📊 No journeys found in database')
+          this.vehicleResults = []
+        }
+      } catch (error) {
+        console.error('❌ Failed to load recent journeys from database:', error)
+        // Fallback to empty array on error
+        this.vehicleResults = []
+      }
+    },
     
     addVehicleResult(vehicleId, startTime, startTimeString, distance, predictedEta, startEdge = null, endEdge = null, routeEdges = null) {
       const result = {
@@ -2341,7 +2377,7 @@ export default {
   async mounted() {
     await this.loadNetworkData()
     await this.loadSimulationStatus()
-    await this.loadResults()
+    await this.loadRecentJourneysFromDB()
     
     // Clear any old finished vehicles to prevent showing stale data on page refresh
     try {
