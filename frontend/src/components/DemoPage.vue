@@ -660,7 +660,7 @@
                             ETA
                           </div>
                           <div class="text-xs font-mono text-slate-100">
-                            {{ formatTime(result.predicted_eta) }}
+                            {{ formatTimeModulo24(result.predicted_eta) }}
                           </div>
                         </div>
                         
@@ -692,7 +692,7 @@
                           <div class="bg-slate-700/50 rounded p-1.5">
                             <div class="text-xs text-slate-400 mb-0.5 font-medium">Arrival Time</div>
                             <div class="text-xs font-mono text-slate-100">
-                              {{ result.end_time_string || formatTime(result.end_time) }}
+                              {{ result.end_time_string ? formatTimeModulo24(result.end_time_string) : formatTimeModulo24(result.end_time) }}
                             </div>
                           </div>
                           
@@ -2907,6 +2907,36 @@ export default {
       }
       
       const hours = Math.floor(totalSeconds / 3600)
+      const minutes = Math.floor((totalSeconds % 3600) / 60)
+      const secs = Math.floor(totalSeconds % 60)
+      
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    },
+    
+    formatTimeModulo24(seconds) {
+      // Handle both string and number inputs
+      let totalSeconds = seconds
+      
+      if (typeof seconds === 'string') {
+        // Parse string format "HH:MM:SS:MS" or "HH:MM:SS"
+        const parts = seconds.split(':')
+        if (parts.length >= 3) {
+          const hours = parseInt(parts[0]) || 0
+          const minutes = parseInt(parts[1]) || 0
+          const secs = parseInt(parts[2]) || 0
+          totalSeconds = hours * 3600 + minutes * 60 + secs
+        } else {
+          totalSeconds = 0
+        }
+      }
+      
+      // Ensure it's a valid number
+      if (isNaN(totalSeconds) || totalSeconds < 0) {
+        totalSeconds = 0
+      }
+      
+      // Apply modulo 24 to hours to show time in current day
+      const hours = Math.floor(totalSeconds / 3600) % 24
       const minutes = Math.floor((totalSeconds % 3600) / 60)
       const secs = Math.floor(totalSeconds % 60)
       

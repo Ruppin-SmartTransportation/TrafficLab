@@ -28,10 +28,13 @@
           <div>
             <h3 class="text-2xl font-semibold mb-4">Research Focus</h3>
             <ul class="text-gray-600 space-y-2">
+              <li>• ETA prediction models and algorithms</li>
+              <li>• Advanced data analysis and visualization</li>
+              <li>• Network analysis and graph theory applications</li>
+              <li>• Smart city infrastructure and optimization</li>
               <li>• Traffic flow simulation and modeling</li>
-              <li>• Machine learning for ETA prediction</li>
+              <li>• Machine learning for transportation systems</li>
               <li>• Real-time traffic data analysis</li>
-              <li>• Intelligent transportation systems</li>
             </ul>
           </div>
         </div>
@@ -39,27 +42,135 @@
     </section>
 
     <!-- Team Section -->
-    <section id="team" class="py-16">
+    <section id="team" class="py-16 bg-gray-50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 class="text-3xl font-bold text-center mb-12">Our Team</h2>
-        <div class="grid md:grid-cols-3 gap-8">
+        <h2 class="text-3xl font-bold text-center mb-6">Our Research Team</h2>
+        <p class="text-center text-gray-600 mb-12 max-w-3xl mx-auto text-lg">
+          Led by Principal Investigator Nadav Voloch, our research team consists of 1 Principal Investigator and 3 Research Scientists, 
+          bringing together expertise in network analysis, smart city applications, ETA prediction models, traffic simulation, 
+          machine learning, and data analysis. We collaborate closely to advance the field of intelligent transportation systems 
+          through innovative research and practical applications.
+        </p>
+        <div class="grid md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div class="text-center bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <div class="w-32 h-32 rounded-full mx-auto mb-4 overflow-hidden border-4 border-blue-200">
+              <img 
+                src="/images/nadav-voloch.jpeg" 
+                alt="Nadav Voloch - Principal Investigator"
+                class="w-full h-full object-cover"
+                @error="handleImageError"
+                @load="handleImageLoad"
+                v-show="showImage"
+              />
+              <div v-show="!showImage" class="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
+                <span class="text-white text-4xl font-bold">NV</span>
+              </div>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">Nadav Voloch</h3>
+            <p class="text-blue-600 font-medium">Principal Investigator</p>
+            <p class="text-gray-600 mt-2 text-sm">Network Analysis & Smart City Applications</p>
+            <p class="text-gray-500 text-xs mt-1">Lead Researcher</p>
+            <div class="mt-3">
+              <a href="https://www.linkedin.com/in/nadav-voloch-570a24254/" target="_blank" 
+                 class="text-blue-500 hover:text-blue-700 text-sm underline">
+                LinkedIn Profile
+              </a>
+            </div>
+          </div>
+          <div class="text-center bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <div class="w-32 h-32 rounded-full mx-auto mb-4 overflow-hidden border-4 border-green-200">
+              <img 
+                src="/images/guy.jpeg" 
+                alt="Guy Tordjman - Research Scientist"
+                class="w-full h-full object-cover"
+                @error="handleImageError2"
+                @load="handleImageLoad2"
+                v-show="showImage2"
+              />
+              <div v-show="!showImage2" class="w-full h-full bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
+                <span class="text-white text-4xl font-bold">GT</span>
+              </div>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">Guy Tordjman</h3>
+            <p class="text-green-600 font-medium">Research Scientist</p>
+            <p class="text-gray-600 mt-2 text-sm">ETA Models & Data Analysis</p>
+            <p class="text-gray-500 text-xs mt-1">Senior Research Scientist</p>
+            <div class="mt-3">
+              <a href="https://www.linkedin.com/in/guy-tordjman/" target="_blank" 
+                 class="text-green-500 hover:text-green-700 text-sm underline">
+                LinkedIn Profile
+              </a>
+            </div>
+          </div>
+          <div class="text-center bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <div class="w-32 h-32 rounded-full mx-auto mb-4 overflow-hidden border-4 border-purple-200">
+              <img 
+                src="/images/maor-meir-hajaj.jpeg" 
+                alt="Maor Meir Hajaj - Research Scientist"
+                class="w-full h-full object-cover"
+                @error="handleImageError3"
+                @load="handleImageLoad3"
+                v-show="showImage3"
+              />
+              <div v-show="!showImage3" class="w-full h-full bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center">
+                <span class="text-white text-4xl font-bold">MM</span>
+              </div>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">Maor Meir Hajaj</h3>
+            <p class="text-purple-600 font-medium">Research Scientist</p>
+            <p class="text-gray-600 mt-2 text-sm">SUMO Integration & ETA Models</p>
+            <p class="text-gray-500 text-xs mt-1">Research Scientist</p>
+            <div class="mt-3">
+              <a href="https://www.linkedin.com/in/maor-meir-hajaj/" target="_blank" 
+                 class="text-purple-500 hover:text-purple-700 text-sm underline">
+                LinkedIn Profile
+              </a>
+            </div>
+          </div>
+          <div class="text-center bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <div class="w-32 h-32 rounded-full mx-auto mb-4 overflow-hidden border-4 border-orange-200">
+              <img 
+                src="/images/matan-shemesh.jpeg" 
+                alt="Matan Shemesh - Research Scientist"
+                class="w-full h-full object-cover"
+                @error="handleImageError4"
+                @load="handleImageLoad4"
+                v-show="showImage4"
+              />
+              <div v-show="!showImage4" class="w-full h-full bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center">
+                <span class="text-white text-4xl font-bold">MS</span>
+              </div>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">Matan Shemesh</h3>
+            <p class="text-orange-600 font-medium">Research Scientist</p>
+            <p class="text-gray-600 mt-2 text-sm">Algorithm Development & Testing</p>
+            <p class="text-gray-500 text-xs mt-1">Research Scientist</p>
+            <div class="mt-3">
+              <a href="https://www.linkedin.com/in/matanshemesh/" target="_blank" 
+                 class="text-orange-500 hover:text-orange-700 text-sm underline">
+                LinkedIn Profile
+              </a>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Team Stats -->
+        <div class="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-2xl mx-auto">
           <div class="text-center">
-            <div class="w-32 h-32 bg-gray-300 rounded-full mx-auto mb-4"></div>
-            <h3 class="text-xl font-semibold">Dr. [Your Name]</h3>
-            <p class="text-blue-600">Principal Investigator</p>
-            <p class="text-gray-600 mt-2">Traffic Simulation & Machine Learning</p>
+            <div class="text-3xl font-bold text-blue-600">4</div>
+            <div class="text-sm text-gray-600">Researchers</div>
           </div>
           <div class="text-center">
-            <div class="w-32 h-32 bg-gray-300 rounded-full mx-auto mb-4"></div>
-            <h3 class="text-xl font-semibold">[Researcher Name]</h3>
-            <p class="text-blue-600">Research Scientist</p>
-            <p class="text-gray-600 mt-2">Data Analysis & Visualization</p>
+            <div class="text-3xl font-bold text-green-600">2+</div>
+            <div class="text-sm text-gray-600">Years Experience</div>
           </div>
           <div class="text-center">
-            <div class="w-32 h-32 bg-gray-300 rounded-full mx-auto mb-4"></div>
-            <h3 class="text-xl font-semibold">[Student Name]</h3>
-            <p class="text-blue-600">PhD Student</p>
-            <p class="text-gray-600 mt-2">SUMO Integration & ETA Models</p>
+            <div class="text-3xl font-bold text-purple-600">10+</div>
+            <div class="text-sm text-gray-600">Publications</div>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-bold text-orange-600">3</div>
+            <div class="text-sm text-gray-600">Active Projects</div>
           </div>
         </div>
       </div>
@@ -220,7 +331,45 @@ export default {
   name: 'HomePage',
   data() {
     return {
-      apiStatus: 'checking...'
+      apiStatus: 'checking...',
+      showImage: true,
+      showImage2: true,
+      showImage3: true,
+      showImage4: true
+    }
+  },
+  methods: {
+    handleImageError(event) {
+      // Hide image and show fallback
+      this.showImage = false
+    },
+    handleImageLoad(event) {
+      // Show image when it loads successfully
+      this.showImage = true
+    },
+    handleImageError2(event) {
+      // Hide image and show fallback for Guy's image
+      this.showImage2 = false
+    },
+    handleImageLoad2(event) {
+      // Show image when it loads successfully for Guy's image
+      this.showImage2 = true
+    },
+    handleImageError3(event) {
+      // Hide image and show fallback for Maor's image
+      this.showImage3 = false
+    },
+    handleImageLoad3(event) {
+      // Show image when it loads successfully for Maor's image
+      this.showImage3 = true
+    },
+    handleImageError4(event) {
+      // Hide image and show fallback for Matan's image
+      this.showImage4 = false
+    },
+    handleImageLoad4(event) {
+      // Show image when it loads successfully for Matan's image
+      this.showImage4 = true
     }
   },
   async mounted() {
