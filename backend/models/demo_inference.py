@@ -5,10 +5,10 @@ Demonstration of the ETA Inference System working with real data.
 
 import torch
 import numpy as np
-from temporal_dataset import TemporalGraphDataset, temporal_collate
+from models.temporal_dataset import TemporalGraphDataset, temporal_collate
 from torch.utils.data import DataLoader
-from model_temporal_moe import TemporalMoEETA
-from utils_targets import invert_to_seconds, get_target_tensor
+from models.model_temporal_moe import TemporalMoEETA
+from models.utils_targets import invert_to_seconds, get_target_tensor
 import yaml
 
 def demo_inference_system():

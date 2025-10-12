@@ -19,8 +19,8 @@ from typing import Dict, List, Tuple, Optional, Any
 from torch_geometric.data import Data, Batch
 
 # Import existing model components
-from model_temporal_moe import TemporalMoEETA
-from utils_targets import invert_to_seconds
+from models.model_temporal_moe import TemporalMoEETA
+from models.utils_targets import invert_to_seconds
 
 def extract_step_number(filename):
     match = re.search(r"step_(\d+)\.pt", filename)
@@ -105,7 +105,7 @@ class RealTimeInference:
     def _load_statistics(self):
         """Load statistics from EDA exports CSV files."""
         # Define paths to CSV files
-        eda_folder = "eda_exports"
+        eda_folder = "models/eda_exports"
         self.vehicle_features_file = os.path.join(eda_folder, "vehicle_feature_summary.csv")
         self.label_features_file = os.path.join(eda_folder, "labels_feature_summary.csv")
         self.edge_features_file = os.path.join(eda_folder, "edge_feature_summary.csv")
@@ -613,6 +613,7 @@ class RealTimeInference:
             if diff < min_diff:
                 min_diff = diff
                 current_file_idx = i
+        print(f"Current file idx: {current_file_idx} for step {current_step} and file {pt_files[current_file_idx]}")
         
         # Create window indices with cyclic wrapping
         window_indices = []
@@ -629,7 +630,7 @@ class RealTimeInference:
             else:
                 # This shouldn't happen with proper cyclic wrapping, but just in case
                 raise IndexError(f"File index {idx} out of range for {len(pt_files)} files")
-        
+        print(f"Last pt file loaded: {pt_files[window_indices[-1]]}")
         return temporal_window
     
     def _get_current_edge_features(self, current_pt_file: Data, current_edge_id: str) -> Tuple[float, float, float]:
@@ -1075,6 +1076,10 @@ class RealTimeInference:
         """
         # Set deterministic seed for consistent results
         self.set_seed(self.seed)
+        #print param 
+        print(f"Vehicle info: {vehicle_info}")
+        print(f"Route info: {route_info}")
+        print(f"Current time: {current_time}")
         
         with torch.no_grad():
             # current_time is already in seconds, no conversion needed

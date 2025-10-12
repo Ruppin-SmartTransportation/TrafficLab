@@ -6,6 +6,7 @@ import uuid
 import xml.etree.ElementTree as ET
 from typing import List, Dict, Tuple, Optional
 from models.entities import Junction, Road, Zone, Vehicle
+from models.eta_inference import Inference
 from sumolib import net as sumo_net
 import traci
 import traci.constants as tc
@@ -38,9 +39,22 @@ class SUMOSimulation:
         
         # Initialize simulation state
         self.simulation_running = False
-        self.current_step = 23400  # Start at 6:30 AM (6*3600 + 30*60 = 23400 seconds)
+        # Start at 5:00 AM (5*3600 = 18000 seconds)
+        self.current_step = 18000  
         self.data_loaded = False
         self.trips_added = 0  # Counter for total trips added
+        
+        # Initialize ETA inference model
+        try:
+            self.eta_inference = Inference(
+                checkpoint_path="models/moe_best.pt",
+                config_path="models/config.yaml",
+                seed=42
+            )
+            print("✅ ETA Inference model initialized successfully")
+        except Exception as e:
+            print(f"⚠️  Failed to initialize ETA inference model: {e}")
+            self.eta_inference = None
         
         # Thread safety for TraCI access
         self.traci_lock = threading.Lock()
@@ -286,80 +300,99 @@ class SUMOSimulation:
             if edge_id in self.roads and hasattr(self.roads[edge_id], 'length'):
                 total_distance += self.roads[edge_id].length
         return total_distance
+            
     
-    def predict_eta(self, vehicle_id, start_edge, end_edge, route_edges, current_time):
+    def predict_eta(self, vehicle_id, depart_pos, route_edges, route_distance, simulation_step_depart_time):
         """
-        Dummy ETA prediction function - will be replaced with ML model later
+        ETA prediction using ML model
         
         Args:
             vehicle_id: ID of the vehicle
-            start_edge: Starting edge ID
-            end_edge: Destination edge ID  
+            depart_pos: Departure position of the vehicle
             route_edges: List of edges in the route
-            current_time: Current simulation time
+            route_distance: Total distance of the route in meters
+            simulation_step_depart_time: Current simulation step time
             
         Returns:
-            dict: Prediction result with ETA and confidence
+            dict: Prediction result with ETA and traffic impact
+            
+        Raises:
+            RuntimeError: If ML model is unavailable or prediction fails
         """
+        # Check if ML model is available (fatal error if not)
+        if self.eta_inference is None:
+            raise RuntimeError("ETA inference model is not available - this is a fatal error")
+        
         try:
-            # Calculate total route distance
-            total_distance = self._calculate_travel_distance(route_edges)
+            # Get vehicle position and zone information
+            current_road = self.roads[route_edges[0]]
+            if current_road:
+                current_junction_id = current_road.from_junction
+                current_junction = self.junctions[current_junction_id]
+                current_x, current_y = current_junction.x, current_junction.y   
+            else:
+                current_x, current_y = 0.0, 0.0
+                print(f"⚠️ Could not get start poition for vehicle {vehicle_id}, using default position")
+            dest_road = self.roads[route_edges[-1]]
+            if dest_road:
+                dest_junction_id = dest_road.to_junction
+                dest_junction = self.junctions[dest_junction_id]
+                dest_x, dest_y = dest_junction.x, dest_junction.y
+                print(f"🔍 Destination position: {dest_x}, {dest_y} on edge {route_edges[-1]}")
+            else:
+                dest_x, dest_y = 0.0, 0.0
+                print(f"⚠️ Could not get shape for edge {route_edges[-1]}, using default position")
+
+            curr_road = self.roads[route_edges[0]]
+            if curr_road:
+                zone = curr_road.zone
+                num_lanes = curr_road.num_lanes
+                print(f"🔍 Current zone: {zone} on edge {route_edges[0]}")
+            else:
+                zone = "A"
+                num_lanes = 2
+                print(f"⚠️ Could not get zone and num_lanes for edge {route_edges[0]}, using default values")
             
-            # Dummy prediction logic - simple distance-based calculation
-            # Assume average speed of 30 km/h (8.33 m/s) for normal roads
-            # Add some randomness to simulate real-world variability
-            import random
-            base_speed = 8.33  # m/s
-            speed_factor = random.uniform(0.7, 1.3)  # 70% to 130% of base speed
-            predicted_speed = base_speed * speed_factor
-            
-            # Calculate predicted travel time
-            predicted_travel_time = total_distance / (predicted_speed * 2)
-            
-            # Add some congestion factor based on route length
-            congestion_factor = 1.0 + (len(route_edges) * 0.05)  # 5% per edge
-            predicted_travel_time *= congestion_factor
-            
-            # Calculate predicted arrival time
-            predicted_arrival_time = current_time + predicted_travel_time
-            
-            # Generate confidence score (80-95%)
-            confidence = random.uniform(0.8, 0.95)
-            
-            prediction_result = {
-                'vehicle_id': vehicle_id,
-                'predicted_eta': predicted_arrival_time,
-                'predicted_travel_time': predicted_travel_time,
-                'predicted_distance': total_distance,
-                'predicted_speed': predicted_speed,
-                'confidence': confidence,
-                'prediction_method': 'dummy_distance_based',
-                'created_at': current_time
+            # Prepare vehicle info for ML model
+            vehicle_info = {
+                "veh_id": vehicle_id,
+                "current_x": current_x,
+                "current_y": current_y,
+                "destination_x": dest_x,
+                "destination_y": dest_y,
+                "current_edge_num_lanes": num_lanes,
+                "zone": zone,
+                "route_length": route_distance,
+                "current_edge_id": route_edges[0]
             }
             
-            print(f"🎯 ETA Prediction for {vehicle_id}:")
-            print(f"   Distance: {total_distance:.1f}m")
-            print(f"   Predicted Speed: {predicted_speed:.1f} m/s")
-            print(f"   Predicted Travel Time: {predicted_travel_time:.1f}s")
-            print(f"   Predicted ETA: {predicted_arrival_time:.1f}s")
-            print(f"   Confidence: {confidence:.2f}")
+            # Prepare route info for ML model
+            route_info = {
+                "route_edges": route_edges,
+                "route_length": route_distance
+            }
+            
+            # # Get ML prediction
+            predicted_eta_seconds, avg_change = self.eta_inference.predict_eta(
+                vehicle_info, route_info, simulation_step_depart_time
+            )
+
+            prediction_result = {
+                'predicted_travel_time': predicted_eta_seconds,
+                'predicted_eta': predicted_eta_seconds + simulation_step_depart_time,
+                'traffic_impact': avg_change
+            }
+            
+            print(f"🎯 ETA Prediction for {vehicle_id} (Trained Model):")
+            print(f"   Predicted ETA: {predicted_eta_seconds:.1f}s ({predicted_eta_seconds/60:.1f} min)")
+            print(f"   Traffic Impact: {avg_change:.2f}s average change")
             
             return prediction_result
             
         except Exception as e:
-            print(f"❌ Error in ETA prediction for {vehicle_id}: {e}")
-            # Return a fallback prediction
-            return {
-                'vehicle_id': vehicle_id,
-                'predicted_eta': current_time + 60.0,  # 1 minute fallback
-                'predicted_travel_time': 60.0,
-                'predicted_distance': 0.0,
-                'predicted_speed': 0.0,
-                'confidence': 0.5,
-                'prediction_method': 'fallback',
-                'created_at': current_time,
-                'error': str(e)
-            }
+            print(f"❌ Trained model ETA prediction failed for {vehicle_id}: {e}")
+            raise RuntimeError(f"ETA prediction failed for vehicle {vehicle_id}: {e}") from e
+    
     
     def get_finished_vehicles(self):
         """Get finished user-defined vehicles"""
@@ -937,13 +970,8 @@ class SUMOSimulation:
                 # Calculate simulation step equivalent for consistency
                 simulation_step_depart_time = self.current_step + 30 - self.current_step % 30
                 route_distance = self._calculate_travel_distance(route_edges)
-                # Depart pos needs to be the center of the road
-                if start_edge in self.roads and hasattr(self.roads[start_edge], 'length'):
-                    depart_pos = self.roads[start_edge].length / 2.2
-                else:
-                    # Fallback: use a default position 
-                    print(f"⚠️ Road {start_edge} not found or no length attribute, using default position")
-                    depart_pos = 0 
+                # Depart pos needs to be the beginning of the road
+                depart_pos = 0 
                 
                 # Add vehicle to simulation FIRST
                 try:
@@ -980,9 +1008,7 @@ class SUMOSimulation:
             
             # Generate ETA prediction
             print(f"🎯 Generating ETA prediction for {vehicle_id}...")
-            prediction = self.predict_eta(vehicle_id, start_edge, end_edge, route_edges, self.current_step)
-            
-            # Store prediction in vehicle tracking data
+            prediction = self.predict_eta(vehicle_id, depart_pos, route_edges, route_distance, simulation_step_depart_time)
             self.user_defined_vehicles[vehicle_id]['prediction'] = prediction
             
             print(f"✅ Journey vehicle {vehicle_id} added to simulation and tracking")

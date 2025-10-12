@@ -6,8 +6,8 @@ without requiring the full dataset.
 
 import torch
 import numpy as np
-from model_temporal_moe import TemporalMoEETA
-from utils_targets import invert_to_seconds
+from models.model_temporal_moe import TemporalMoEETA
+from models.utils_targets import invert_to_seconds
 import yaml
 
 def test_model_loading():

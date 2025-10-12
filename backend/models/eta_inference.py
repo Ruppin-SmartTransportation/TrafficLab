@@ -7,10 +7,10 @@ import torch
 import numpy as np
 import random
 import yaml
-from temporal_dataset import TemporalGraphDataset, temporal_collate
+from models.temporal_dataset import TemporalGraphDataset, temporal_collate
 from torch.utils.data import DataLoader
-from model_temporal_moe import TemporalMoEETA
-from utils_targets import invert_to_seconds, get_target_tensor
+from models.model_temporal_moe import TemporalMoEETA
+from models.utils_targets import invert_to_seconds, get_target_tensor
 
 def set_deterministic_seed(seed=42):
     """Set all random seeds for deterministic behavior."""
@@ -68,7 +68,8 @@ class Inference:
         """Get baseline predictions for the original simulation at given step."""
         print(f"\n1. BASELINE: Original Simulation at Step {step}")
         print("=" * 50)
-        
+        if step < 900:
+            step = 900
         # Update config to use the specified step
         self.cfg["data"]["playback_start_idx"] = step // 30 - 29  # 30 files ending at step
         self.cfg["data"]["playback_num_files"] = 30
@@ -134,7 +135,7 @@ class Inference:
         print("=" * 50)
         
         # Import real-time inference
-        from real_time_inference import RealTimeInference
+        from models.real_time_inference import RealTimeInference
         
         # Initialize real-time inference
         inference = RealTimeInference(
@@ -155,6 +156,11 @@ class Inference:
         print(f"   Route length: {route_info['route_length']:.2f} meters")
         print(f"   Current edge: {vehicle_info['current_edge_id']}")
         print(f"   Zone: {vehicle_info['zone']}")
+        #print all the params
+        print(f"   Current step: {step}")
+        print(f"   Vehicle info: {vehicle_info}")
+        print(f"   Route info: {route_info}")
+     
         
         # Add the new vehicle to the simulation
         updated_pt_file = inference.add_vehicle_to_last_snapshot(
@@ -283,6 +289,7 @@ class Inference:
             tuple: (predicted_eta_seconds, average_change_seconds)
         """
         # Get baseline predictions
+        print(f"Getting baseline predictions for step {step}")
         baseline_data = self.get_baseline_predictions(step)
         
         # Add vehicle and get updated predictions
@@ -307,59 +314,3 @@ class Inference:
         
         return predicted_eta, avg_change
 
-def main():
-    """Demonstrate the predict_eta function with both test cases."""
-    print("🚀 Proven Inference System - Using predict_eta Function")
-    print("=" * 80)
-    
-    # Initialize the proven inference system
-    inference = Inference(
-        checkpoint_path="models/moe_best.pt",
-        config_path="models/config.yaml",
-        seed=42
-    )
-    
-    # Test 1: Step 64080
-    print("\n1. Testing Step 64080")
-    print("-" * 30)
-    
-    vehicle_info_64080 = {
-        "veh_id": "my_veh_2426",
-        "current_x": 6450.86,
-        "current_y": -1773.1610214487862,
-        "destination_x": 4555.7172413793105,
-        "destination_y": 1001.6,
-        "current_edge_num_lanes": 2,
-        "zone": "B",
-        "route_length": 16886.05,
-        "current_edge_id": "AN8AN9"
-    }
-    
-    route_info_64080 = {
-        "route_edges": [
-            "AN8AN9",
-        "AN9AN10",
-        "-E1",
-        "AK0AK1",
-        "AK1AK2",
-        "AK2AJ2"
-        ],
-        "route_length": 4706.35
-    }
-    # eta 798 seconds
-    
-    try:
-        eta_64080, avg_change_64080 = inference.predict_eta(
-            vehicle_info_64080, route_info_64080, 64080
-        )
-        print(f"✅ Step 64080 Results:")
-        print(f"   Vehicle: {vehicle_info_64080['veh_id']}")
-        print(f"   Predicted ETA: {eta_64080:.2f} seconds ({eta_64080/60:.1f} minutes)")
-        print(f"   Average change to existing vehicles: {avg_change_64080:.2f} seconds")
-    except Exception as e:
-        print(f"❌ Step 64080 failed: {e}")
-    
-   
-
-if __name__ == "__main__":
-    main()

@@ -2481,7 +2481,6 @@ export default {
           
           // Skip if we've already shown this vehicle
           if (this.shownFinishedVehicles.has(vehicle.id)) {
-            console.log('⏭️ Skipping already shown vehicle:', vehicle.id)
             continue
           }
           
@@ -2508,9 +2507,6 @@ export default {
             message += `\nPredicted: ${this.formatTime(predictedDuration)} (${predictedDuration.toFixed(1)}s)`
             message += `\nActual: ${this.formatTime(actualDuration)} (${actualDuration.toFixed(1)}s)`
             message += `\nAccuracy: ${accuracyText}`
-            message += `\nConfidence: ${(prediction.confidence * 100).toFixed(1)}%`
-            message += `\nDistance: ${prediction.predicted_distance.toFixed(1)}m`
-            message += `\nPredicted Speed: ${(prediction.predicted_speed * 3.6).toFixed(1)} km/h`
           } else {
             // Update vehicle result with completion data
             this.updateVehicleResult(vehicle.id, vehicle.end_time, duration, 0)
