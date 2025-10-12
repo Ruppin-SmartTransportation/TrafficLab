@@ -2,10 +2,24 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies for SUMO
 RUN apt-get update && apt-get install -y \
+    wget \
     gcc \
-    && rm -rf /var/lib/apt/lists/*
+    build-essential \
+    libxerces-c-dev \
+    libproj-dev \
+    libgdal-dev \
+    libfox-1.6-dev \
+    libgl1-mesa-dev \
+    libglu1-mesa-dev 
+
+# Install SUMO from package manager
+RUN apt-get install -y sumo sumo-tools && rm -rf /var/lib/apt/lists/*
+
+# Add SUMO to PATH
+ENV PATH="/usr/share/sumo/bin:${PATH}"
+ENV SUMO_HOME="/usr/share/sumo"
 
 # Copy requirements and install
 COPY requirements.txt .

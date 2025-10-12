@@ -1,28 +1,52 @@
-version: '3.3'
-
 services:
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod
-    ports:
-      - "80:80"
+    expose:
+      - "80"
     environment:
       - NODE_ENV=production
     depends_on:
       - backend
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      # route
+      - traefik.http.routers.frontend.rule=Host(`demo.smart-transport.cloud`)
+      - traefik.http.routers.frontend.entrypoints=websecure
+      - traefik.http.routers.frontend.tls.certresolver=le
+      # service port
+      - traefik.http.services.frontend.loadbalancer.server.port=80
+    networks: [ traefik ]
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/trafficlab
       - NODE_ENV=production
     depends_on:
       - db
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      # route
+      - traefik.http.routers.backend.rule=Host(`api.smart-transport.cloud`)
+      - traefik.http.routers.backend.entrypoints=websecure
+      - traefik.http.routers.backend.tls.certresolver=le
+      # service port
+      - traefik.http.services.backend.loadbalancer.server.port=8000
+      # CORS (adjust origins as needed)
+      - traefik.http.middlewares.cors.headers.accesscontrolalloworiginlist=https://demo.smart-transport.cloud
+      - traefik.http.middlewares.cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS
+      - traefik.http.middlewares.cors.headers.accesscontrolallowheaders=*
+      - traefik.http.middlewares.cors.headers.accesscontrolallowcredentials=true
+      - traefik.http.routers.backend.middlewares=cors
+    networks: [ traefik, internal ]
 
   db:
     image: postgres:15-alpine
@@ -32,19 +56,17 @@ services:
       - POSTGRES_PASSWORD=password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl
-    depends_on:
-      - frontend
-      - backend
+    expose:
+      - "5432"
+    networks: [ internal ]
 
 volumes:
   postgres_data:
+
+networks:
+  traefik:
+    external: true
+    name: rev_proxy_traefik
+  internal:
+    name: internal
+    driver: bridge
