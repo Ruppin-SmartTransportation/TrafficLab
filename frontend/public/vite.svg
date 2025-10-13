@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Car body -->
+  <rect x="6" y="12" width="20" height="8" rx="2" fill="#2563eb"/>
+  
+  <!-- Car roof -->
+  <rect x="8" y="8" width="16" height="6" rx="1" fill="#1d4ed8"/>
+  
+  <!-- Front windshield -->
+  <rect x="9" y="9" width="6" height="4" rx="0.5" fill="#93c5fd"/>
+  
+  <!-- Rear windshield -->
+  <rect x="17" y="9" width="6" height="4" rx="0.5" fill="#93c5fd"/>
+  
+  <!-- Front wheel -->
+  <circle cx="10" cy="22" r="3" fill="#1f2937"/>
+  <circle cx="10" cy="22" r="2" fill="#374151"/>
+  
+  <!-- Rear wheel -->
+  <circle cx="22" cy="22" r="3" fill="#1f2937"/>
+  <circle cx="22" cy="22" r="2" fill="#374151"/>
+  
+  <!-- Headlights -->
+  <circle cx="7" cy="16" r="1" fill="#fbbf24"/>
+  
+  <!-- Taillights -->
+  <circle cx="25" cy="16" r="1" fill="#ef4444"/>
+</svg>
+

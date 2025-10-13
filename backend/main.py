@@ -25,31 +25,75 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize SUMO simulation
-sumo_config_path = os.path.join(os.path.dirname(__file__), "sumo", "urban_three_zones.sumocfg")
-sim_config_path = os.path.join(os.path.dirname(__file__), "sumo", "sim.config.json")
-
-print("🚀 Initializing TrafficLab System...")
-sumo_simulation = SUMOSimulation(sumo_config_path, sim_config_path)
-
-# Debug system state after initialization
-sumo_simulation.debug_system_state()
+# Global variable for SUMO simulation
+sumo_simulation = None
 
 @app.on_event("startup")    
 async def startup_event():
-    print("✅ System initialized successfully")
+    global sumo_simulation
+    print("🚀 Initializing TrafficLab System...")
+    
+    # Initialize database first
+    try:
+        print("🗄️ Initializing database...")
+        from models.database import create_tables
+        create_tables()
+        print("✅ Database tables created successfully")
+    except Exception as e:
+        print(f"❌ Failed to initialize database: {e}")
+        raise
+    
+    # Initialize SUMO simulation during startup, not at import time
+    sumo_config_path = os.path.join(os.path.dirname(__file__), "sumo", "urban_three_zones.sumocfg")
+    sim_config_path = os.path.join(os.path.dirname(__file__), "sumo", "sim.config.json")
+    
+    try:
+        sumo_simulation = SUMOSimulation(sumo_config_path, sim_config_path)
+        # Debug system state after initialization
+        sumo_simulation.debug_system_state()
+        print("✅ System initialized successfully")
+    except Exception as e:
+        print(f"❌ Failed to initialize system: {e}")
+        raise
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    sumo_simulation.stop_simulation()
+    global sumo_simulation
+    if sumo_simulation:
+        try:
+            sumo_simulation.stop_simulation()
+            print("✅ Simulation stopped gracefully")
+        except Exception as e:
+            print(f"⚠️ Error stopping simulation: {e}")
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for container orchestration"""
+    if sumo_simulation is None:
+        return {"status": "unhealthy", "message": "System not initialized"}
+    
+    try:
+        # Check database connectivity
+        from models.database import get_db
+        from sqlalchemy import text
+        db = next(get_db())
+        db.execute(text("SELECT 1"))
+        db.close()
+        
+        # Check if simulation is responsive
+        status = sumo_simulation.get_simulation_status()
+        return {
+            "status": "healthy", 
+            "simulation": status,
+            "database": "connected"
+        }
+    except Exception as e:
+        return {"status": "unhealthy", "message": str(e)}
 
 @app.get("/")
 async def root():
     return {"message": "SmartTransportation Lab API is running!"}
 
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
 
 @app.get("/api/simulation/status")
 async def get_simulation_status():
