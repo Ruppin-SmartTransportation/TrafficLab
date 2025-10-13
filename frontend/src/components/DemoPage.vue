@@ -14,15 +14,15 @@
 
     <!-- Main Demo Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div class="flex gap-6">
+            <div class="flex flex-col lg:flex-row gap-6">
               
         <!-- Network Map (Full width) -->
         <div class="w-full bg-white rounded-lg shadow-lg">
           <!-- Simulation Map -->
           <div class="relative h-full">
             <div class="bg-gray-100 rounded-t-lg p-4 border-b">
-              <div class="flex items-center justify-between">
-                <div>
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div class="flex-1">
                   <h2 class="text-xl font-semibold">Traffic Network Map</h2>
                   <div class="text-sm text-gray-600 mt-1">
                     Click on roads to set start and destination points
@@ -30,47 +30,47 @@
                 </div>
                 
                 <!-- Center Time Display -->
-                <div class="absolute left-1/2 transform -translate-x-1/2">
-                  <div class="text-xl font-semibold text-gray-800">
+                <div class="absolute left-1/2 transform -translate-x-1/2 sm:relative sm:left-auto sm:transform-none">
+                  <div class="text-xl font-semibold text-gray-800 text-center sm:text-left">
                     {{ formatTimeWithDay(simulationTime) }}
                   </div>
                 </div>
                 
                 <!-- Control Buttons -->
-                <div class="flex space-x-3">
-              <!-- Simulation Playback Controls - Always show -->
-              <div class="flex items-center space-x-2">
-                <!-- Reset Points Button - Show when points are selected but journey not running -->
-                    <button 
-                  v-if="startPoint && !isJourneyRunning"
-                  @click="resetPoints"
-                  class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold transition duration-300 text-sm"
-                    >
-                  🔄 Reset Points
-                    </button>
-                
-                    <button 
-                  @click="handleMainButtonClick()"
-                  :class="getMainButtonClass()"
-                  class="text-white px-4 py-2 rounded-lg font-semibold transition duration-300 text-sm"
-                    >
-                  {{ getMainButtonText() }}
-                    </button>
-                
-                <div class="text-sm text-gray-600">
-                  Trips: {{ simulationStatus.trips_added || 0 }}
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:space-x-3 sm:gap-0">
+                  <!-- Simulation Playback Controls - Always show -->
+                  <div class="flex items-center space-x-2">
+                    <!-- Reset Points Button - Show when points are selected but journey not running -->
+                        <button 
+                      v-if="startPoint && !isJourneyRunning"
+                      @click="resetPoints"
+                      class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold transition duration-300 text-sm"
+                        >
+                      🔄 Reset Points
+                        </button>
+                    
+                        <button 
+                      @click="handleMainButtonClick()"
+                      :class="getMainButtonClass()"
+                      class="text-white px-4 py-2 rounded-lg font-semibold transition duration-300 text-sm"
+                        >
+                      {{ getMainButtonText() }}
+                        </button>
+                    
+                    <div class="text-sm text-gray-600">
+                      Trips: {{ simulationStatus.trips_added || 0 }}
+                      </div>
+                    <div class="text-sm text-gray-600">
+                      Active: {{ simulationStatus.vehicles_in_route || 0 }}
+                    </div>
                   </div>
-                <div class="text-sm text-gray-600">
-                  Active: {{ simulationStatus.vehicles_in_route || 0 }}
+                    </div>
+                  </div>
                 </div>
-              </div>
-                </div>
-              </div>
-            </div>
             
             <!-- SUMO Network Container -->
                   <div 
-                    class="relative bg-gray-300 h-[calc(105.8vh-317.4px)]"
+                    class="relative bg-gray-300 h-[calc(100vh-200px)] sm:h-[calc(105.8vh-317.4px)]"
                     ref="mapContainer"
                   >
               <!-- SUMO Network Visualization -->
@@ -79,11 +79,14 @@
                 :viewBox="svgViewBox" 
                 width="100%" 
                 height="100%" 
-                class="absolute inset-0 cursor-crosshair map-container" 
+                class="absolute inset-0 cursor-crosshair map-container touch-none" 
                 style="background: #f1f5f9; min-height: 690px;"
                 preserveAspectRatio="xMidYMid meet"
-                        @mousemove="handleMouseMove"
+                @mousemove="handleMouseMove"
                 @click="handleMapClick"
+                @touchstart="handleTouchStart"
+                @touchmove="handleTouchMove"
+                @touchend="handleTouchEnd"
               >
                 <!-- SUMO Network Edges (Roads) -->
                 <g v-if="networkData && networkData.edges">
@@ -276,7 +279,7 @@
               </svg>
 
               <!-- Map Legend -->
-              <div v-if="showLegend" class="absolute top-4 left-4 bg-white bg-opacity-95 rounded-lg shadow-lg pointer-events-auto animate-fade-in" style="max-width: 200px;">
+              <div v-if="showLegend" class="absolute top-2 left-2 sm:top-4 sm:left-4 bg-white bg-opacity-95 rounded-lg shadow-lg pointer-events-auto animate-fade-in" style="max-width: 180px;">
                 <!-- Legend Header (Always Visible) -->
                 <div 
                   @click="toggleLegend"
@@ -365,7 +368,7 @@
               </div>
 
               <!-- Statistics Section (Left side overlay) -->
-              <div class="absolute top-0 right-full bg-slate-900 bg-opacity-98 rounded-l-lg shadow-xl pointer-events-auto animate-fade-in h-[calc(105.8vh-317.4px)]" style="width: 280px; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;">
+              <div class="absolute top-0 right-full bg-slate-900 bg-opacity-98 rounded-l-lg shadow-xl pointer-events-auto animate-fade-in h-[calc(100vh-200px)] sm:h-[calc(105.8vh-317.4px)] w-[250px] sm:w-[280px]" style="overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;">
                 <!-- Statistics Header -->
                 <div class="flex items-center justify-between p-4 border-b border-slate-700 bg-slate-800">
                   <h3 class="text-sm font-semibold text-slate-100 flex items-center">
@@ -1843,7 +1846,56 @@ export default {
         x: event.clientX - rect.left,
         y: event.clientY - rect.top
       }
-      
+    },
+    
+    // Touch event handlers for mobile devices
+    handleTouchStart(event) {
+      event.preventDefault()
+      if (event.touches.length === 1) {
+        const touch = event.touches[0]
+        const svg = this.$refs.networkSvg
+        if (!svg) return
+
+        const rect = svg.getBoundingClientRect()
+        this.mousePosition = {
+          x: touch.clientX - rect.left,
+          y: touch.clientY - rect.top
+        }
+      }
+    },
+    
+    handleTouchMove(event) {
+      event.preventDefault()
+      if (event.touches.length === 1) {
+        const touch = event.touches[0]
+        const svg = this.$refs.networkSvg
+        if (!svg) return
+
+        const rect = svg.getBoundingClientRect()
+        this.mousePosition = {
+          x: touch.clientX - rect.left,
+          y: touch.clientY - rect.top
+        }
+      }
+    },
+    
+    handleTouchEnd(event) {
+      event.preventDefault()
+      if (event.changedTouches.length === 1) {
+        const touch = event.changedTouches[0]
+        const svg = this.$refs.networkSvg
+        if (!svg) return
+
+        const rect = svg.getBoundingClientRect()
+        const clickEvent = {
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+          target: event.target
+        }
+        
+        // Simulate a click event for touch
+        this.handleMapClick(clickEvent)
+      }
     },
     
     
