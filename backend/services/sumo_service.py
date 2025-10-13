@@ -41,6 +41,7 @@ class SUMOSimulation:
         self.simulation_running = False
         # Start at 5:00 AM (5*3600 = 18000 seconds)
         self.current_step = 18000  
+        print(f"🔍 Starting simulation at step {self.current_step} which is {self.get_simulation_time(offset=0)}")
         self.data_loaded = False
         self.trips_added = 0  # Counter for total trips added
         
@@ -327,7 +328,7 @@ class SUMOSimulation:
             # Get vehicle position and zone information
             current_road = self.roads[route_edges[0]]
             if current_road:
-                current_junction_id = current_road.from_junction
+                current_junction_id = current_road.to_junction
                 current_junction = self.junctions[current_junction_id]
                 current_x, current_y = current_junction.x, current_junction.y   
             else:
@@ -912,7 +913,6 @@ class SUMOSimulation:
         for zone_id, zone in self.zones.items():
             print(f"  Zone {zone_id}: {len(zone.edges)} edges, {len(zone.junctions)} junctions, {len(zone.current_vehicles)} vehicles")
         
-        print(f"\n🗄️  Database session: Not using database")
         print("="*50)
     
     def add_journey_vehicle(self, start_edge, end_edge, route_edges):

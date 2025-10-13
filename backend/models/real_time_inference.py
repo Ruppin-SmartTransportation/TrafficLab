@@ -608,6 +608,8 @@ class RealTimeInference:
         current_file_idx = 0
         min_diff = float('inf')
         
+        current_step = current_step % (24 * 60 * 60)
+
         for i, step_num in enumerate(step_numbers):
             diff = abs(step_num - current_step)
             if diff < min_diff:
