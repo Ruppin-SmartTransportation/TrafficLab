@@ -695,6 +695,4 @@ class SUMOSimulation:
         print("\n📍 Zone Details:")
         for zone_id, zone in self.zones.items():
             print(f"  Zone {zone_id}: {len(zone.edges)} edges, {len(zone.junctions)} junctions, {len(zone.current_vehicles)} vehicles")
-        
-        print(f"\n🗄️  Database session: Not using database")
         print("="*50)

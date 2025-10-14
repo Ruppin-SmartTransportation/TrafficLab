@@ -41,6 +41,7 @@ class SUMOSimulation:
         self.simulation_running = False
         # Start at 5:00 AM (5*3600 = 18000 seconds)
         self.current_step = 18000  
+        print(f"🔍 Starting simulation at step {self.current_step} which is {self.get_simulation_time(offset=0)}")
         self.data_loaded = False
         self.trips_added = 0  # Counter for total trips added
         
@@ -280,7 +281,6 @@ class SUMOSimulation:
                             print(f"   Accuracy: {accuracy:.2f} ({accuracy*100:.1f}%)")
                         else:
                             print(f"   Accuracy: N/A (actual duration was 0s)")
-                        print(f"   Confidence: {prediction['confidence']:.2f}")
                     
                     print(f"📋 Finished vehicles count: {len(self.finished_vehicles)}")
                     print(f"🎯 DEBUG: Added vehicle {vehicle_id} to finished_vehicles list")

@@ -68,10 +68,17 @@ class Inference:
         """Get baseline predictions for the original simulation at given step."""
         print(f"\n1. BASELINE: Original Simulation at Step {step}")
         print("=" * 50)
-        if step < 900:
-            step = 900
-        # Update config to use the specified step
-        self.cfg["data"]["playback_start_idx"] = step // 30 - 29  # 30 files ending at step
+       
+        
+        # Map simulation step to 24-hour cycle data
+        # 24 * 60 * 60 = 86400 seconds in a day
+        # Map current step to corresponding step in available data
+        step_in_24h_cycle = step % (24 * 60 * 60)
+        if step_in_24h_cycle < 900:    
+            step_in_24h_cycle = 900
+            
+        # Update config to use the mapped step
+        self.cfg["data"]["playback_start_idx"] = max(0, step_in_24h_cycle // 30 - 29)  # 30 files ending at step
         self.cfg["data"]["playback_num_files"] = 30
         
         # Load original data
