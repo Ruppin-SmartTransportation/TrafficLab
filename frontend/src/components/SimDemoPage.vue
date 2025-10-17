@@ -50,9 +50,211 @@
           
           <!-- Map Section - 60% -->
           <div class="map-section">
-            <div class="section-placeholder">
-              <h3>Map Section</h3>
-              <p>60% width</p>
+            <!-- SUMO Network Container -->
+            <div 
+              class="map-container"
+              ref="mapContainer"
+            >
+              <!-- SUMO Network Visualization -->
+              <svg 
+                ref="networkSvg"
+                :viewBox="svgViewBox" 
+                width="100%" 
+                height="100%" 
+                class="absolute inset-0 cursor-crosshair map-container touch-none" 
+                style="background: #f1f5f9;"
+                preserveAspectRatio="xMidYMid meet"
+                @mousemove="handleMouseMove"
+                @click="handleMapClick"
+                @touchstart="handleTouchStart"
+                @touchmove="handleTouchMove"
+                @touchend="handleTouchEnd"
+              >
+                <!-- SUMO Network Edges (Roads) -->
+                <g v-if="networkData && networkData.edges">
+                  <template v-for="edge in networkData.edges" :key="edge.id">
+                    <!-- Skip rendering E5 and E6 edges only -->
+                    <template v-if="edge.id === 'E5' || edge.id === 'E6'"></template>
+                    <template v-else>
+                      <!-- Use path for express edges with detailed shape, line for regular roads -->
+                      <path 
+                        v-if="isExpressEdge(edge) && edge.shape_points && edge.shape_points.length > 0 && getPathData(edge.shape_points)"
+                        :d="getPathData(edge.shape_points)"
+                        :stroke="getRouteStrokeColor(edge)"
+                        :stroke-width="getRouteStrokeWidth(edge)"
+                        :opacity="getRoadOpacity(edge)"
+                        :class="getRoadClass(edge)"
+                        :data-road-name="edge.id"
+                        fill="none"
+                        @click="handleEdgeClick(edge, $event)"
+                      />
+                      <!-- Fallback to line if path data is invalid -->
+                      <line 
+                        v-else-if="isExpressEdge(edge)"
+                        :x1="getJunctionPosition(edge.from_junction)?.x || 0"
+                        :y1="getJunctionPosition(edge.from_junction)?.y || 0"
+                        :x2="getJunctionPosition(edge.to_junction)?.x || 0"
+                        :y2="getJunctionPosition(edge.to_junction)?.y || 0"
+                        :stroke="getRouteStrokeColor(edge)"
+                        :stroke-width="getRouteStrokeWidth(edge)"
+                        :opacity="getRoadOpacity(edge)"
+                        :class="getRoadClass(edge)"
+                        :data-road-name="edge.id"
+                        @click="handleEdgeClick(edge, $event)"
+                      />
+                      <!-- Regular roads -->
+                      <line 
+                        v-else
+                        :x1="getJunctionPosition(edge.from_junction)?.x || 0"
+                        :y1="getJunctionPosition(edge.from_junction)?.y || 0"
+                        :x2="getJunctionPosition(edge.to_junction)?.x || 0"
+                        :y2="getJunctionPosition(edge.to_junction)?.y || 0"
+                        :stroke="getRouteStrokeColor(edge)"
+                        :stroke-width="getRouteStrokeWidth(edge)"
+                        :opacity="getRoadOpacity(edge)"
+                        :class="getRoadClass(edge)"
+                        :data-road-name="edge.id"
+                        @click="handleEdgeClick(edge, $event)"
+                      />
+                      
+                      <!-- Invisible clickable areas for easier selection -->
+                      <path 
+                        v-if="isExpressEdge(edge) && edge.shape_points && edge.shape_points.length > 0 && getPathData(edge.shape_points)"
+                        :d="getPathData(edge.shape_points)"
+                        stroke="transparent" 
+                        :stroke-width="60"
+                        fill="none"
+                        :class="getRoadClass(edge)"
+                        :data-road-name="edge.id"
+                        @click="handleEdgeClick(edge, $event)"
+                      />
+                      <!-- Fallback invisible clickable line -->
+                      <line 
+                        v-else-if="isExpressEdge(edge)"
+                        :x1="getJunctionPosition(edge.from_junction)?.x || 0"
+                        :y1="getJunctionPosition(edge.from_junction)?.y || 0"
+                        :x2="getJunctionPosition(edge.to_junction)?.x || 0"
+                        :y2="getJunctionPosition(edge.to_junction)?.y || 0"
+                        stroke="transparent"
+                        :stroke-width="60"
+                        :class="getRoadClass(edge)"
+                        :data-road-name="edge.id"
+                        @click="handleEdgeClick(edge, $event)"
+                      />
+                      <line 
+                        v-else
+                        :x1="getJunctionPosition(edge.from_junction)?.x || 0"
+                        :y1="getJunctionPosition(edge.from_junction)?.y || 0"
+                        :x2="getJunctionPosition(edge.to_junction)?.x || 0"
+                        :y2="getJunctionPosition(edge.to_junction)?.y || 0"
+                        stroke="transparent"
+                        :stroke-width="60"
+                        :class="getRoadClass(edge)"
+                        :data-road-name="edge.id"
+                        @click="handleEdgeClick(edge, $event)"
+                      />
+                    </template>
+                  </template>
+                </g>
+
+                <!-- SUMO Network Junctions -->
+                <g v-if="networkData && networkData.junctions">
+                  <circle 
+                    v-for="junction in networkData.junctions" 
+                    :key="junction.id"
+                    :cx="junction.x" 
+                    :cy="junction.y" 
+                    r="1.5" 
+                    fill="#1f2937"
+                    opacity="0.6"
+                  />
+                </g>
+
+                <!-- Start point marker -->
+                <circle 
+                  v-if="startPoint" 
+                  :cx="startPoint.x" 
+                  :cy="startPoint.y" 
+                  r="100" 
+                  fill="#10b981" 
+                  stroke="white" 
+                  stroke-width="8"
+                  class="cursor-pointer drop-shadow-lg"
+                />
+                <text 
+                  v-if="startPoint" 
+                  :x="startPoint.x" 
+                  :y="startPoint.y + 60" 
+                  text-anchor="middle" 
+                  fill="black" 
+                  font-size="180" 
+                  font-weight="bold"
+                >
+                  S
+                </text>
+                
+                <!-- Destination point marker -->
+                <circle 
+                  v-if="destinationPoint" 
+                  :cx="destinationPoint.x" 
+                  :cy="destinationPoint.y" 
+                  r="100" 
+                  fill="#ef4444" 
+                  stroke="white" 
+                  stroke-width="8"
+                  class="cursor-pointer drop-shadow-lg"
+                />
+                <text 
+                  v-if="destinationPoint" 
+                  :x="destinationPoint.x" 
+                  :y="destinationPoint.y + 60" 
+                  text-anchor="middle" 
+                  fill="black" 
+                  font-size="180" 
+                  font-weight="bold"
+                >
+                  D
+                </text>
+                
+                <!-- Route path -->
+                <path 
+                  v-if="routePath" 
+                  :d="routePath" 
+                  stroke="#00ff00" 
+                  stroke-width="8" 
+                  fill="none" 
+                  opacity="0.9"
+                  class="route-path"
+                />
+                
+                <!-- Real Vehicles from Simulation -->
+                <g v-if="activeVehicles && activeVehicles.length > 0">
+                  <!-- Regular vehicles (circles) -->
+                  <circle 
+                    v-for="vehicle in activeVehicles.filter(v => !isNaN(v.x) && !isNaN(v.y) && v.type !== 'user_defined')"
+                    :key="vehicle.id"
+                    :cx="vehicle.x"
+                    :cy="vehicle.y"
+                    r="36"
+                    :fill="getVehicleColor(vehicle.type, vehicle.status)"
+                    stroke="#000000"
+                    stroke-width="3"
+                    class="vehicle-marker"
+                    opacity="0.8"
+                  />
+                  <!-- User-defined vehicles (yellow stars) -->
+                  <path 
+                    v-for="vehicle in activeVehicles.filter(v => !isNaN(v.x) && !isNaN(v.y) && v.type === 'user_defined')"
+                    :key="vehicle.id"
+                    :d="getStarPath(vehicle.x, vehicle.y, 108)"
+                    :fill="getVehicleColor(vehicle.type, vehicle.status)"
+                    stroke="#000000"
+                    stroke-width="9"
+                    class="vehicle-marker"
+                    opacity="0.8"
+                  />
+                </g>
+              </svg>
             </div>
           </div>
           
@@ -71,6 +273,8 @@
 </template>
 
 <script>
+import apiService from '../services/api.js'
+
 export default {
   name: 'SimDemoPage',
   data() {
@@ -102,7 +306,38 @@ export default {
         '6xl': 3840
       },
       
-      // Ready for your data properties
+      // Map-related data
+      mousePosition: { x: 0, y: 0 },
+      startPoint: null,
+      destinationPoint: null,
+      isJourneyRunning: false,
+      
+      // Network visualization
+      networkData: null,
+      networkBounds: null,
+      svgViewBox: "0 0 1000 1000",
+      
+      // Simulation playback
+      isSimulationPlaying: false,
+      simulationStatus: {
+        vehicles: 0,
+        vehicles_in_route: 0,
+        trips_added: 0,
+        current_step: 0
+      },
+      
+      // Vehicle management
+      activeVehicles: [],
+      vehicleUpdateInterval: null,
+      
+      // Route data
+      routePath: null,
+      routeEdges: null,
+      routeDistance: null,
+      routeDuration: null,
+      
+      // Animation intervals
+      simulationUpdateInterval: null
     }
   },
   methods: {
@@ -177,6 +412,427 @@ export default {
       console.log('Viewport changed:', this.viewport)
     },
     
+    // Map methods
+    async loadNetworkData() {
+      try {
+        console.log('🔄 Loading network data...')
+        const response = await apiService.getNetworkData()
+        
+        if (response) {
+          this.networkData = response
+          this.networkBounds = response.bounds
+          
+          // Calculate optimal viewBox with asymmetric padding
+          const paddingX = 0.02 // 2% padding on sides
+          const paddingY = 0.01 // 1% padding on top and bottom
+          const width = this.networkBounds.max_x - this.networkBounds.min_x
+          const height = this.networkBounds.max_y - this.networkBounds.min_y
+          const paddingXValue = width * paddingX
+          const paddingYValue = height * paddingY
+          
+          this.svgViewBox = `${this.networkBounds.min_x - paddingXValue} ${this.networkBounds.min_y - paddingYValue} ${width + 2 * paddingXValue} ${height + 2 * paddingYValue}`
+          
+          console.log('✅ Network data loaded successfully:', {
+            edges: this.networkData?.edges?.length || 0,
+            junctions: this.networkData?.junctions?.length || 0,
+            bounds: this.networkBounds,
+            viewBox: this.svgViewBox
+          })
+        } else {
+          console.error('❌ Failed to load network data: No response')
+        }
+      } catch (error) {
+        console.error('❌ Error loading network data:', error)
+        this.networkData = null
+      }
+    },
+    
+    
+    getJunctionPosition(junctionId) {
+      if (!this.networkData || !this.networkData.junctions) return null
+      return this.networkData.junctions.find(j => j.id === junctionId)
+    },
+    
+    isExpressEdge(edge) {
+      return edge.id && (edge.id.startsWith('-E') || edge.id.startsWith('E'))
+    },
+    
+    getPathData(shapePoints) {
+      if (!shapePoints || shapePoints.length < 2) return ''
+      
+      let pathData = `M ${shapePoints[0][0]} ${shapePoints[0][1]}`
+      for (let i = 1; i < shapePoints.length; i++) {
+        pathData += ` L ${shapePoints[i][0]} ${shapePoints[i][1]}`
+      }
+      return pathData
+    },
+    
+    getRoadStrokeColor(edge) {
+      // Expressways are blue, regular roads are dark gray for better visibility
+      if (edge.id && (edge.id.startsWith('-E') || edge.id.startsWith('E'))) {
+        return "#1e40af"  // Darker blue for expressways
+      }
+      return "#374151"  // Dark gray for regular roads - more visible than black
+    },
+    
+    getRoadStrokeWidth(edge) {
+      // All roads have thick strokes
+      if (edge.id && (edge.id.startsWith('-E') || edge.id.startsWith('E'))) {
+        return "17"  // Expressways
+      }
+      return "15"  // Regular roads
+    },
+    
+    getRoadOpacity(edge) {
+      // Expressways are dimmed, regular roads are full opacity
+      if (edge.id && (edge.id.startsWith('-E') || edge.id.startsWith('E'))) {
+        return "0.6"
+      }
+      return "1.0"
+    },
+    
+    isExpressway(edge) {
+      return edge.id && (edge.id.startsWith('-E') || edge.id.startsWith('E'))
+    },
+    
+    isRouteEdge(edge) {
+      // Check if this edge is part of the calculated route (only intermediate edges)
+      if (!this.routeEdges || !Array.isArray(this.routeEdges)) return false
+      
+      const edgeIndex = this.routeEdges.indexOf(edge.id)
+      // Only highlight intermediate edges (skip first and last)
+      return edgeIndex > 0 && edgeIndex < this.routeEdges.length - 1
+    },
+    
+    getRouteStrokeColor(edge) {
+      // Return bright fluorescent green for route edges
+      if (this.isRouteEdge(edge)) {
+        return "#00ff00"  // Bright green
+      }
+      
+      // Expressways are blue, regular roads are dark gray for better visibility
+      if (this.isExpressway(edge)) {
+        return "#1e40af"  // Darker blue for expressways
+      }
+      return "#374151"  // Dark gray for regular roads - more visible than black
+    },
+    
+    getRouteStrokeWidth(edge) {
+      // Make route edges much thicker and more visible
+      if (this.isRouteEdge(edge)) {
+        return "40"  // Extra thick for route
+      }
+      
+      return this.getRoadStrokeWidth(edge)
+    },
+    
+    getRoadClass(edge) {
+      let baseClass = "road-path"
+      
+      // Check if it's an expressway (any pattern starting with E)
+      if (edge.id && (edge.id.startsWith('-E') || edge.id.startsWith('E'))) {
+        baseClass += " expressway"
+      }
+      
+      // Add clickable class when simulation is stopped
+      if (!this.isSimulationPlaying) {
+        baseClass += " clickable"
+      }
+      
+      return baseClass
+    },
+    
+    getVehicleColor(type, status) {
+      if (type === 'user_defined') return '#fbbf24'
+      if (status === 'running') return '#3b82f6'
+      if (status === 'finished') return '#10b981'
+      return '#6b7280'
+    },
+    
+    getStarPath(x, y, size) {
+      const points = 5
+      const outerRadius = size / 2
+      const innerRadius = outerRadius * 0.4
+      let path = ''
+      
+      for (let i = 0; i < points * 2; i++) {
+        const angle = (i * Math.PI) / points
+        const radius = i % 2 === 0 ? outerRadius : innerRadius
+        const px = x + Math.cos(angle) * radius
+        const py = y + Math.sin(angle) * radius
+        
+        if (i === 0) {
+          path += `M ${px} ${py}`
+        } else {
+          path += ` L ${px} ${py}`
+        }
+      }
+      path += ' Z'
+      return path
+    },
+    
+    handleMapClick(event) {
+      // Only show overlay if simulation is running and clicking on empty SVG area
+      if ((this.isSimulationPlaying || this.isJourneyRunning) && event.target.tagName === 'svg') {
+        console.log('🚗 Simulation running - showing overlay on map click')
+      }
+    },
+    
+    handleMouseMove(event) {
+      const svg = this.$refs.networkSvg
+      if (!svg) return
+
+      const rect = svg.getBoundingClientRect()
+      this.mousePosition = {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      }
+    },
+    
+    handleTouchStart(event) {
+      event.preventDefault()
+      if (event.touches.length === 1) {
+        const touch = event.touches[0]
+        const svg = this.$refs.networkSvg
+        if (!svg) return
+
+        const rect = svg.getBoundingClientRect()
+        this.mousePosition = {
+          x: touch.clientX - rect.left,
+          y: touch.clientY - rect.top
+        }
+      }
+    },
+    
+    handleTouchMove(event) {
+      event.preventDefault()
+      if (event.touches.length === 1) {
+        const touch = event.touches[0]
+        const svg = this.$refs.networkSvg
+        if (!svg) return
+
+        const rect = svg.getBoundingClientRect()
+        this.mousePosition = {
+          x: touch.clientX - rect.left,
+          y: touch.clientY - rect.top
+        }
+      }
+    },
+    
+    handleTouchEnd(event) {
+      event.preventDefault()
+      if (event.changedTouches.length === 1) {
+        const touch = event.changedTouches[0]
+        const svg = this.$refs.networkSvg
+        if (!svg) return
+
+        const rect = svg.getBoundingClientRect()
+        const clickEvent = {
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+          target: event.target
+        }
+        
+        this.handleMapClick(clickEvent)
+      }
+    },
+    
+    handleEdgeClick(edge, event) {
+      event.stopPropagation()
+      
+      if (this.isSimulationPlaying || this.isJourneyRunning) {
+        return
+      }
+      
+      // Calculate the exact middle position of the edge
+      let x, y
+      
+      if (edge.shape_points && edge.shape_points.length > 0) {
+        const totalLength = edge.shape_points.length
+        const midIndex = Math.floor(totalLength / 2)
+        
+        if (totalLength % 2 === 0 && midIndex > 0) {
+          const point1 = edge.shape_points[midIndex - 1]
+          const point2 = edge.shape_points[midIndex]
+          x = (point1[0] + point2[0]) / 2
+          y = (point1[1] + point2[1]) / 2
+        } else {
+          x = edge.shape_points[midIndex][0]
+          y = edge.shape_points[midIndex][1]
+        }
+      } else {
+        const fromJunction = this.getJunctionPosition(edge.from_junction)
+        const toJunction = this.getJunctionPosition(edge.to_junction)
+        if (fromJunction && toJunction) {
+          x = (fromJunction.x + toJunction.x) / 2
+          y = (fromJunction.y + toJunction.y) / 2
+        } else {
+          x = 0
+          y = 0
+        }
+      }
+      
+      if (!this.startPoint) {
+        this.startPoint = { id: edge.id, x, y }
+        console.log('📍 Start point set:', this.startPoint)
+      } else if (!this.destinationPoint) {
+        this.destinationPoint = { id: edge.id, x, y }
+        console.log('📍 Destination point set:', this.destinationPoint)
+        this.calculateAndDisplayRoute()
+      }
+    },
+    
+    async calculateAndDisplayRoute() {
+      if (!this.startPoint || !this.destinationPoint) return
+      
+      console.log('🛣️ Calculating route from', this.startPoint.id, 'to', this.destinationPoint.id)
+      
+      try {
+        const routeResponse = await apiService.calculateRouteByEdges(
+          this.startPoint.id, 
+          this.destinationPoint.id
+        )
+        
+        if (routeResponse.error) {
+          console.error('❌ Route calculation failed:', routeResponse.error)
+          return
+        }
+        
+        console.log('✅ Route calculated:', routeResponse)
+        
+        this.routeEdges = routeResponse.edges
+        this.routeDistance = routeResponse.distance
+        this.routeDuration = routeResponse.duration
+        this.routePath = this.generateRoutePath(this.routeEdges)
+        
+        console.log('🟢 Route displayed on map')
+        
+      } catch (error) {
+        console.error('❌ Error calculating route:', error)
+      }
+    },
+    
+    generateRoutePath(edges) {
+      if (!edges || edges.length === 0) return ''
+      
+      let pathData = ''
+      let isFirst = true
+      
+      for (const edgeId of edges) {
+        const edge = this.networkData.edges.find(e => e.id === edgeId)
+        if (!edge) continue
+        
+        if (edge.shape_points && edge.shape_points.length > 0) {
+          if (isFirst) {
+            pathData = `M ${edge.shape_points[0][0]} ${edge.shape_points[0][1]}`
+            isFirst = false
+          }
+          for (let i = 1; i < edge.shape_points.length; i++) {
+            pathData += ` L ${edge.shape_points[i][0]} ${edge.shape_points[i][1]}`
+          }
+        } else {
+          const fromJunction = this.getJunctionPosition(edge.from_junction)
+          const toJunction = this.getJunctionPosition(edge.to_junction)
+          if (fromJunction && toJunction) {
+            if (isFirst) {
+              pathData = `M ${fromJunction.x} ${fromJunction.y}`
+              isFirst = false
+            }
+            pathData += ` L ${toJunction.x} ${toJunction.y}`
+          }
+        }
+      }
+      
+      return pathData
+    },
+    
+    resetPoints() {
+      this.startPoint = null
+      this.destinationPoint = null
+      this.routePath = null
+      this.routeEdges = null
+      this.routeDistance = null
+      this.routeDuration = null
+      console.log('🔄 Points reset')
+    },
+    
+    handleMainButtonClick() {
+      if (this.isJourneyRunning) {
+        this.stopJourney()
+      } else {
+        this.startJourney()
+      }
+    },
+    
+    getMainButtonClass() {
+      return this.isJourneyRunning 
+        ? 'bg-red-600 hover:bg-red-700' 
+        : 'bg-blue-600 hover:bg-blue-700'
+    },
+    
+    getMainButtonText() {
+      return this.isJourneyRunning ? '⏹️ Stop Journey' : '▶️ Start Journey'
+    },
+    
+    async startJourney() {
+      if (!this.startPoint || !this.destinationPoint) return
+      
+      console.log('🚀 Starting journey')
+      this.isJourneyRunning = true
+      
+      try {
+        const response = await apiService.startJourney(
+          this.startPoint.id,
+          this.destinationPoint.id
+        )
+        
+        if (response.success) {
+          console.log('✅ Journey started successfully')
+          this.startSimulationPlayback()
+        } else {
+          console.error('❌ Failed to start journey:', response.error)
+          this.isJourneyRunning = false
+        }
+      } catch (error) {
+        console.error('❌ Error starting journey:', error)
+        this.isJourneyRunning = false
+      }
+    },
+    
+    stopJourney() {
+      console.log('⏹️ Stopping journey')
+      this.isJourneyRunning = false
+      this.stopSimulationPlayback()
+      this.resetPoints()
+    },
+    
+    startSimulationPlayback() {
+      this.isSimulationPlaying = true
+      this.simulationUpdateInterval = setInterval(() => {
+        this.updateSimulationStatus()
+      }, 1000)
+    },
+    
+    stopSimulationPlayback() {
+      this.isSimulationPlaying = false
+      if (this.simulationUpdateInterval) {
+        clearInterval(this.simulationUpdateInterval)
+        this.simulationUpdateInterval = null
+      }
+    },
+    
+    async updateSimulationStatus() {
+      try {
+        const response = await apiService.getSimulationStatus()
+        if (response.success) {
+          this.simulationStatus = response.data
+        }
+      } catch (error) {
+        console.error('❌ Error updating simulation status:', error)
+      }
+    },
+    
+    
     // Ready for your methods
   },
   mounted() {
@@ -194,7 +850,8 @@ export default {
       }
     })
     
-    // Ready for your mounted logic
+    // Load network data for the map
+    this.loadNetworkData()
   },
   beforeUnmount() {
     // Clean up listeners
@@ -689,6 +1346,151 @@ html, body {
   padding: 0.25rem;
   overflow: hidden;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.map-container {
+  position: relative;
+  flex: 1;
+  background-color: #f1f5f9;
+  overflow: hidden;
+}
+
+.map-container {
+  width: 100%;
+  height: 100%;
+  background: #f1f5f9;
+  min-height: 690px;
+}
+
+
+/* Map elements - Exact CSS from original DemoPage */
+.road-path {
+  pointer-events: stroke;
+  transition: all 0.2s ease;
+}
+
+.road-path.clickable {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 32 32"><defs><filter id="shadow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="1" dy="1" stdDeviation="1" flood-color="%23000000" flood-opacity="0.3"/></filter></defs><g filter="url(%23shadow)"><circle cx="16" cy="16" r="14" fill="%23ffffff" stroke="%23374151" stroke-width="2"/><path d="M6 14h20c1.1 0 2 .9 2 2v4c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2v-4c0-1.1.9-2 2-2z" fill="%23dc2626"/><path d="M8 10h16v4H8z" fill="%23fbbf24"/><path d="M10 8h12v2H10z" fill="%23f59e0b"/><circle cx="9" cy="20" r="2.5" fill="%231f2937"/><circle cx="23" cy="20" r="2.5" fill="%231f2937"/><circle cx="9" cy="20" r="1" fill="%236b7280"/><circle cx="23" cy="20" r="1" fill="%236b7280"/><path d="M12 12h8v2h-8z" fill="%23ffffff"/></g></svg>') 11 11, pointer;
+}
+
+.road-path:hover {
+  stroke: #00bfff !important;
+  stroke-width: 50 !important;
+}
+
+/* Invisible clickable areas - only for easier clicking, no visual effects */
+.road-path[stroke="transparent"] {
+  pointer-events: stroke;
+  cursor: inherit;
+}
+
+.road-path[stroke="transparent"]:hover {
+  stroke: transparent !important;
+  stroke-width: 60 !important;
+}
+
+.road-tooltip {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+/* Enhanced road styling for better visibility */
+.road-path {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.expressway {
+  stroke-dasharray: 5,5;
+}
+
+.start-marker,
+.dest-marker {
+  cursor: pointer;
+  transition: r 0.2s ease;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+}
+
+.start-marker:hover,
+.dest-marker:hover {
+  r: 15;
+}
+
+.marker-text {
+  pointer-events: none;
+  user-select: none;
+}
+
+.route-path {
+  stroke-dasharray: 5,5;
+  animation: dash 1s linear infinite;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+.vehicle-marker {
+  cursor: pointer;
+  transition: r 0.2s ease;
+  opacity: 0.8;
+}
+
+.vehicle-marker:hover {
+  r: 45;
+}
+
+/* Road tooltip animation */
+.road-tooltip {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Legend animation */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Hide scrollbar for webkit browsers */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Performance optimizations for journey cards */
+.will-change-transform {
+  will-change: transform;
+}
+
+/* Smooth scrolling for journey results */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* Optimize hover effects */
+.hover\:bg-slate-750:hover {
+  background-color: rgb(51 65 85 / 0.8);
+}
+
+/* Better focus states for accessibility */
+button:focus {
+  outline: 2px solid rgb(59 130 246);
+  outline-offset: 2px;
 }
 
 /* ===== RESULTS SECTION (20%) ===== */
