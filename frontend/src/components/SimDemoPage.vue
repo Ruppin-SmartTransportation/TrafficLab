@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-100">
+  <div class="app-container">
     <!-- Navigation -->
     <nav class="bg-blue-900 text-white shadow-lg">
       <div class="w-full px-2 xs:px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 3xl:px-20 4xl:px-24">
@@ -21,6 +21,35 @@
         </div>
       </div>
     </nav>
+
+    <!-- Main Content Section -->
+    <div class="main-content">
+      <div class="content-grid">
+        <!-- Analysis Section - 20% -->
+        <div class="analysis-section">
+          <div class="section-placeholder">
+            <h3>Analysis Section</h3>
+            <p>20% width</p>
+          </div>
+        </div>
+        
+        <!-- Map Section - 60% -->
+        <div class="map-section">
+          <div class="section-placeholder">
+            <h3>Map Section</h3>
+            <p>60% width</p>
+          </div>
+        </div>
+        
+        <!-- Results Section - 20% -->
+        <div class="results-section">
+          <div class="section-placeholder">
+            <h3>Results Section</h3>
+            <p>20% width</p>
+          </div>
+        </div>
+      </div>
+    </div>
 
   </div>
 </template>
@@ -165,6 +194,19 @@ export default {
 </script>
 
 <style scoped>
+/* ===== APP CONTAINER ===== */
+.app-container {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+/* Prevent scroll bars for this component */
+
 /* Responsive utilities and edge case handling */
 
 /* ===== HEADER GRID LAYOUT ===== */
@@ -281,7 +323,7 @@ export default {
 }
 
 /* Desktop text - show on larger screens */
-@media (min-width: 640px) {
+@media (min-width:720px) {
   .header-mobile-text {
     display: none !important;
   }
@@ -457,5 +499,77 @@ html, body {
     background-color: #1a1a1a;
     color: #ffffff;
   }
+}
+
+/* ===== MAIN CONTENT LAYOUT ===== */
+.main-content {
+  flex: 1;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 20% 60% 20%;
+  gap: 0.25rem;
+  height: 100%;
+  width: 100%;
+  padding: 0.25rem;
+  box-sizing: border-box;
+}
+
+/* ===== ANALYSIS SECTION (20%) ===== */
+.analysis-section {
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  padding: 0.25rem;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* ===== MAP SECTION (60%) ===== */
+.map-section {
+  background-color: #dbeafe;
+  border: 1px solid #3b82f6;
+  border-radius: 0.25rem;
+  padding: 0.25rem;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ===== RESULTS SECTION (20%) ===== */
+.results-section {
+  background-color: #f0fdf4;
+  border: 1px solid #22c55e;
+  border-radius: 0.25rem;
+  padding: 0.25rem;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* ===== SECTION PLACEHOLDERS ===== */
+.section-placeholder {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #374151;
+}
+
+.section-placeholder h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+.section-placeholder p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
 }
 </style>
