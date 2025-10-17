@@ -5,7 +5,7 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <h1 class="text-5xl font-bold mb-6">SmartTransportation Lab</h1>
         <p class="text-xl mb-8">Advancing Traffic Simulation and ETA Prediction through AI</p>
-        <router-link to="/demo" class="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition duration-300 inline-block">
+        <router-link to="/sim-demo" class="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition duration-300 inline-block">
           Try Live Demo
         </router-link>
       </div>
@@ -257,7 +257,7 @@
             Experience our real-time traffic simulation combined with AI-powered ETA prediction. 
             Watch as our system processes live traffic data and provides accurate arrival time estimates.
           </p>
-          <router-link to="/demo" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-300 inline-block">
+          <router-link to="/sim-demo" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-300 inline-block">
             Launch Interactive Demo
           </router-link>
         </div>

@@ -14,7 +14,7 @@
             <a href="/#about" class="hover:text-blue-200">About</a>
             <a href="/#team" class="hover:text-blue-200">Team</a>
             <a href="/#research" class="hover:text-blue-200">Research</a>
-            <router-link to="/demo" class="hover:text-blue-200">Live Demo</router-link>
+            <router-link to="/sim-demo" class="hover:text-blue-200">Live Demo</router-link>
             <a href="/#publications" class="hover:text-blue-200">Publications</a>
             <a href="/#contact" class="hover:text-blue-200">Contact</a>
           </div>
