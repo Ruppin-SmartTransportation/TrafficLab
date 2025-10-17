@@ -70,6 +70,7 @@
                 @touchmove="handleTouchMove"
                 @touchend="handleTouchEnd"
               >
+
                 <!-- SUMO Network Edges (Roads) -->
                 <g v-if="networkData && networkData.edges">
                   <template v-for="edge in networkData.edges" :key="edge.id">
@@ -1260,7 +1261,7 @@ html, body {
   .content-grid {
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: 60% 20% 20%;
+    grid-template-rows: 40% 30% 30%;
     gap: 0.25rem;
     height: 100%;
     width: 100%;
@@ -1339,7 +1340,7 @@ html, body {
 }
 
 /* ===== MAP SECTION (60%) ===== */
-.map-section {
+.ma {
   background-color: #dbeafe;
   border: 1px solid #3b82f6;
   border-radius: 0.25rem;
@@ -1362,7 +1363,6 @@ html, body {
   width: 100%;
   height: 100%;
   background: #f1f5f9;
-  min-height: 690px;
 }
 
 
