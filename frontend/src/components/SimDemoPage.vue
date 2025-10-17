@@ -24,28 +24,44 @@
 
     <!-- Main Content Section -->
     <div class="main-content">
-      <div class="content-grid">
-        <!-- Analysis Section - 20% -->
-        <div class="analysis-section">
-          <div class="section-placeholder">
-            <h3>Analysis Section</h3>
-            <p>20% width</p>
+      <!-- Landscape Orientation Message (Desktop/Landscape) -->
+      <div class="landscape-message">
+        <div class="landscape-content">
+          <div class="phone-icon">📱</div>
+          <h2>Please Rotate Your Device</h2>
+          <p>For the best simulation experience, please rotate your device to portrait orientation.</p>
+          <div class="rotation-hint">
+            <div class="arrow">↻</div>
+            <span>Turn your device upright</span>
           </div>
         </div>
-        
-        <!-- Map Section - 60% -->
-        <div class="map-section">
-          <div class="section-placeholder">
-            <h3>Map Section</h3>
-            <p>60% width</p>
+      </div>
+
+      <!-- Simulation Layout (Portrait Only) -->
+      <div class="simulation-layout">
+        <div class="content-grid">
+          <!-- Analysis Section - 20% -->
+          <div class="analysis-section">
+            <div class="section-placeholder">
+              <h3>Analysis Section</h3>
+              <p>20% width</p>
+            </div>
           </div>
-        </div>
-        
-        <!-- Results Section - 20% -->
-        <div class="results-section">
-          <div class="section-placeholder">
-            <h3>Results Section</h3>
-            <p>20% width</p>
+          
+          <!-- Map Section - 60% -->
+          <div class="map-section">
+            <div class="section-placeholder">
+              <h3>Map Section</h3>
+              <p>60% width</p>
+            </div>
+          </div>
+          
+          <!-- Results Section - 20% -->
+          <div class="results-section">
+            <div class="section-placeholder">
+              <h3>Results Section</h3>
+              <p>20% width</p>
+            </div>
           </div>
         </div>
       </div>
@@ -508,6 +524,68 @@ html, body {
   padding: 0;
   overflow: hidden;
   box-sizing: border-box;
+  position: relative;
+}
+
+/* ===== LANDSCAPE MESSAGE (Desktop/Landscape) ===== */
+.landscape-message {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  text-align: center;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.landscape-content {
+  max-width: 400px;
+}
+
+.phone-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: rotate 2s ease-in-out infinite;
+}
+
+.portrait-content h2 {
+  font-size: 2rem;
+  margin: 0 0 1rem 0;
+  font-weight: bold;
+}
+
+.portrait-content p {
+  font-size: 1.1rem;
+  margin: 0 0 2rem 0;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.rotation-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.arrow {
+  font-size: 2rem;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+.rotation-hint span {
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
+/* ===== SIMULATION LAYOUT (Portrait Only) ===== */
+.simulation-layout {
+  display: block;
+  height: 100%;
+  width: 100%;
 }
 
 .content-grid {
@@ -518,6 +596,52 @@ html, body {
   width: 100%;
   padding: 0.25rem;
   box-sizing: border-box;
+}
+
+/* ===== RESPONSIVE BEHAVIOR ===== */
+/* Desktop/Laptop - Always show simulation regardless of orientation */
+@media (min-width: 1024px) {
+  .landscape-message {
+    display: none;
+  }
+  
+  .simulation-layout {
+    display: block;
+  }
+}
+
+/* Mobile and Tablets - Portrait only simulation */
+/* Show simulation layout on mobile and portrait tablets */
+@media (max-width: 1023px) and (orientation: portrait) {
+  .landscape-message {
+    display: none;
+  }
+  
+  .simulation-layout {
+    display: block;
+  }
+}
+
+/* Show landscape message on mobile and tablets in landscape */
+@media (max-width: 1023px) and (orientation: landscape) {
+  .landscape-message {
+    display: flex;
+  }
+  
+  .simulation-layout {
+    display: none;
+  }
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes rotate {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(90deg); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 /* ===== ANALYSIS SECTION (20%) ===== */
