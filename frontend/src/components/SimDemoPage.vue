@@ -598,6 +598,33 @@ html, body {
   box-sizing: border-box;
 }
 
+/* Portrait layout for mobile and tablets */
+@media (max-width: 1023px) and (orientation: portrait) {
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 60% 20% 20%;
+    gap: 0.25rem;
+    height: 100%;
+    width: 100%;
+    padding: 0.25rem;
+    box-sizing: border-box;
+  }
+  
+  /* Reorder sections for portrait */
+  .analysis-section {
+    order: 2;
+  }
+  
+  .map-section {
+    order: 1;
+  }
+  
+  .results-section {
+    order: 3;
+  }
+}
+
 /* ===== RESPONSIVE BEHAVIOR ===== */
 /* Desktop/Laptop - Always show simulation regardless of orientation */
 @media (min-width: 1024px) {
