@@ -543,11 +543,25 @@ export default {
       return baseClass
     },
     
-    getVehicleColor(type, status) {
-      if (type === 'user_defined') return '#fbbf24'
-      if (status === 'running') return '#3b82f6'
-      if (status === 'finished') return '#10b981'
-      return '#6b7280'
+    getVehicleColor(vehicleType, status) {
+      // White if stagnant
+      if (status === 'stagnant') {
+        return '#ffffff'
+      }
+
+      // Color based on vehicle type
+      switch(vehicleType) {
+        case 'passenger':
+          return '#3b82f6'  // Blue
+        case 'bus':
+          return '#f59e0b'  // Orange
+        case 'truck':
+          return '#10b981'  // Green
+        case 'user_defined':
+          return '#fbbf24'  // Yellow
+        default:
+          return '#6b7280'  // Gray
+      }
     },
     
     getStarPath(x, y, size) {
@@ -833,6 +847,34 @@ export default {
       }
     },
     
+    // Vehicle management methods
+    startVehicleUpdates() {
+      this.vehicleUpdateInterval = setInterval(() => {
+        this.loadActiveVehicles()
+      }, 1000) // Update every second
+    },
+    
+    stopVehicleUpdates() {
+      if (this.vehicleUpdateInterval) {
+        clearInterval(this.vehicleUpdateInterval)
+        this.vehicleUpdateInterval = null
+      }
+    },
+    
+    async loadActiveVehicles() {
+      try {
+        const response = await apiService.getActiveVehicles()
+        
+        if (response && response.vehicles && Array.isArray(response.vehicles)) {
+          this.activeVehicles = response.vehicles
+        } else if (response && Array.isArray(response)) {
+          this.activeVehicles = response
+        }
+      } catch (error) {
+        console.error('❌ Error loading active vehicles:', error)
+      }
+    },
+    
     
     // Ready for your methods
   },
@@ -853,6 +895,10 @@ export default {
     
     // Load network data for the map
     this.loadNetworkData()
+    
+    // Load vehicles immediately and start updates
+    this.loadActiveVehicles()
+    this.startVehicleUpdates()
   },
   beforeUnmount() {
     // Clean up listeners
@@ -863,6 +909,10 @@ export default {
     if (this.resizeTimeout) {
       clearTimeout(this.resizeTimeout)
     }
+    
+    // Clean up intervals
+    this.stopVehicleUpdates()
+    this.stopSimulationPlayback()
   }
 }
 </script>
@@ -1340,7 +1390,7 @@ html, body {
 }
 
 /* ===== MAP SECTION (60%) ===== */
-.ma {
+.map-section {
   background-color: #dbeafe;
   border: 1px solid #3b82f6;
   border-radius: 0.25rem;
