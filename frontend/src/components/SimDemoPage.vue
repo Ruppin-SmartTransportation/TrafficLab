@@ -595,9 +595,9 @@
             <!-- Control Buttons - Top Right Overlay -->
             <div class="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 pointer-events-auto">
               <div class="flex flex-col items-stretch gap-1 sm:gap-2 sm:flex-row sm:items-center">
-                <!-- Start Journey Button - Show when both points are set -->
+                <!-- Start Journey Button - Show when both points are set but journey not running -->
                 <button 
-                  v-if="startPoint && destinationPoint"
+                  v-if="startPoint && destinationPoint && !isJourneyRunning"
                   @click="handleMainButtonClick()"
                   :class="getMainButtonClass()"
                   class="text-white px-2 py-1 sm:px-4 sm:py-2 rounded-md sm:rounded-lg font-semibold transition duration-300 text-xs sm:text-sm shadow-lg"
@@ -628,7 +628,7 @@
                   <span class="mr-2 text-blue-400">📊</span>
                   Recent Journeys
                 </h3>
-              </div>
+            </div>
               
               <!-- Results Content -->
               <div class="p-4 h-full overflow-y-auto hide-scrollbar scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
@@ -636,7 +636,7 @@
                   <div class="text-4xl mb-3">🚗</div>
                   <div class="font-medium">No journeys started yet</div>
                   <div class="text-xs mt-1">Click on roads to set start and destination points</div>
-                </div>
+          </div>
                 
                 <div v-else class="space-y-1 sm:space-y-1.5">
                   <div v-for="(result, index) in vehicleResults" :key="result.vehicle_id" 
@@ -646,7 +646,7 @@
                     <div class="flex items-center justify-between mb-1 sm:mb-2">
                       <div class="flex items-center space-x-1 sm:space-x-2">
                         <span class="text-xs sm:text-xs font-medium text-slate-300">Journey #{{ totalJourneyCount - index }}</span>
-                      </div>
+        </div>
                       <span class="text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium flex items-center space-x-1"
                             :class="result.status === 'finished' ? 'bg-emerald-600 text-emerald-100' : 'bg-blue-600 text-blue-100'">
                         <span v-if="result.status === 'finished'">✓</span>
@@ -786,6 +786,27 @@
       </div>
     </div>
 
+    <!-- Finished Vehicle Overlay - Arrow pointing to recent journeys -->
+    <div v-if="showFinishedVehicleOverlay" class="absolute top-1/2 right-4 transform -translate-y-1/2 pointer-events-auto z-50 animate-fade-in">
+      <div class="relative">
+        <!-- Arrow pointing to recent journeys section -->
+        <div class="bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
+          Journey #{{ finishedVehicleMessage }} completed - check recent journeys
+        </div>
+        <!-- Arrow pointing left -->
+        <div class="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2">
+          <div class="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-green-500"></div>
+        </div>
+        <!-- Close button -->
+        <button 
+          @click="closeFinishedVehicleOverlay"
+          class="absolute -top-1 -right-1 bg-green-600 hover:bg-green-700 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold transition duration-200"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+
     <!-- Plot Modal -->
     <div v-if="showPlotModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="closePlotModal">
       <div class="bg-slate-800 rounded-lg p-6 max-w-7xl w-full mx-4 max-h-[95vh] overflow-hidden" @click.stop>
@@ -897,6 +918,7 @@ export default {
       
       // Simulation playback
       isSimulationPlaying: false,
+      simulationTime: 0,
       simulationStatus: {
         vehicles: 0,
         vehicles_in_route: 0,
@@ -912,6 +934,12 @@ export default {
       showLegend: true,
       legendCollapsed: false,
       legendAutoFoldTimer: null,
+      
+      // Finished vehicle overlay
+      showFinishedVehicleOverlay: false,
+      finishedVehicleMessage: '',
+      finishedVehicleTimer: null,
+      shownFinishedVehicles: new Set(), // Track which vehicles we've already shown
       
       // Results tracking
       vehicleResults: [], // Array of vehicle journey results
@@ -1279,10 +1307,6 @@ export default {
       event.preventDefault()
       event.stopPropagation()
       
-      if (this.isSimulationPlaying || this.isJourneyRunning) {
-        return
-      }
-      
       // Calculate the exact middle position of the edge
       let x, y
       
@@ -1402,7 +1426,7 @@ export default {
     },
     
     handleMainButtonClick() {
-      this.startJourney()
+        this.startJourney()
     },
     
     getMainButtonClass() {
@@ -1645,6 +1669,9 @@ export default {
         accuracy: null
       }
       
+      // Increment total journey count for new journey
+      this.totalJourneyCount++
+      
       // Add to beginning of array (most recent first)
       this.vehicleResults.unshift(result)
       
@@ -1654,6 +1681,7 @@ export default {
       }
       
       console.log('📊 Vehicle result added:', result)
+      console.log('📊 Total journey count incremented to:', this.totalJourneyCount)
     },
     
     
@@ -1687,6 +1715,10 @@ export default {
     startVehicleUpdates() {
       this.vehicleUpdateInterval = setInterval(() => {
         this.loadActiveVehicles()
+        // Also update simulation status to keep running time current
+        this.loadSimulationStatus()
+        // Always check for finished vehicles regardless of simulation state
+        this.checkFinishedVehicles()
       }, 1000) // Update every second
     },
     
@@ -1705,9 +1737,86 @@ export default {
           this.activeVehicles = response.vehicles
         } else if (response && Array.isArray(response)) {
           this.activeVehicles = response
+        } else {
+          console.log('📊 No active vehicles found')
+          this.activeVehicles = []
         }
       } catch (error) {
         console.error('❌ Error loading active vehicles:', error)
+        this.activeVehicles = []
+      }
+    },
+    
+    closeFinishedVehicleOverlay() {
+      this.showFinishedVehicleOverlay = false
+      this.finishedVehicleMessage = ''
+      
+      // Clear the auto-close timer if it exists
+      if (this.finishedVehicleTimer) {
+        clearTimeout(this.finishedVehicleTimer)
+        this.finishedVehicleTimer = null
+      }
+    },
+    
+    async checkFinishedVehicles() {
+      try {
+        const response = await apiService.getFinishedVehicles()
+        const finishedVehicles = response.finished_vehicles || []
+        
+        for (const vehicle of finishedVehicles) {
+          // Skip if we've already shown this vehicle
+          if (this.shownFinishedVehicles.has(vehicle.id)) {
+            continue
+          }
+          
+          const duration = vehicle.end_time - vehicle.start_time
+          let message = `Vehicle ${vehicle.id} finished journey in ${this.formatTime(duration)} (${duration.toFixed(1)}s)`
+          
+          // Add prediction information if available
+          if (vehicle.prediction) {
+            const prediction = vehicle.prediction
+            const predictedDuration = prediction.predicted_travel_time
+            const actualDuration = duration
+            
+            // Update vehicle result with completion data
+            this.updateVehicleResult(vehicle.id, vehicle.end_time, actualDuration, predictedDuration)
+            
+            // Calculate accuracy, handling division by zero
+            let accuracyText = 'N/A'
+            if (actualDuration > 0) {
+              const accuracy = 1.0 - Math.abs(predictedDuration - actualDuration) / actualDuration
+              accuracyText = `${(accuracy * 100).toFixed(1)}%`
+            }
+            
+            message += `\n\n🎯 ETA Prediction Results:`
+            message += `\nPredicted: ${this.formatTime(predictedDuration)} (${predictedDuration.toFixed(1)}s)`
+            message += `\nActual: ${this.formatTime(actualDuration)} (${actualDuration.toFixed(1)}s)`
+            message += `\nAccuracy: ${accuracyText}`
+          } else {
+            // Update vehicle result with completion data
+            this.updateVehicleResult(vehicle.id, vehicle.end_time, duration, 0)
+          }
+          
+          // Mark vehicle as shown
+          this.shownFinishedVehicles.add(vehicle.id)
+          console.log('✅ Marked vehicle as shown:', vehicle.id)
+          
+          // Find the journey number for this vehicle
+          const result = this.vehicleResults.find(r => r.vehicle_id === vehicle.id)
+          const journeyNumber = result ? (this.totalJourneyCount - this.vehicleResults.indexOf(result)) : '?'
+          
+          // Show overlay for finished vehicle
+          this.showFinishedVehicleOverlay = true
+          this.finishedVehicleMessage = journeyNumber
+          console.log('🎉 Showing finished vehicle overlay for journey #', journeyNumber)
+          
+          // Auto-close after 20 seconds
+          this.finishedVehicleTimer = setTimeout(() => {
+            this.closeFinishedVehicleOverlay()
+          }, 20000)
+        }
+      } catch (error) {
+        console.error('Error checking finished vehicles:', error)
       }
     },
     
@@ -1760,6 +1869,23 @@ export default {
         
         if (response) {
           this.simulationStatus = response
+          this.isSimulationPlaying = response.is_running || false
+          
+          // Convert simulation time string to seconds
+          if (response.simulation_time && typeof response.simulation_time === 'string') {
+            const parts = response.simulation_time.split(':')
+            if (parts.length >= 3) {
+              const hours = parseInt(parts[0]) || 0
+              const minutes = parseInt(parts[1]) || 0
+              const secs = parseInt(parts[2]) || 0
+              this.simulationTime = hours * 3600 + minutes * 60 + secs
+            } else {
+              this.simulationTime = 0
+            }
+          } else {
+            this.simulationTime = response.simulation_time || 0
+          }
+          
           console.log('✅ Simulation status loaded:', this.simulationStatus)
         } else {
           console.log('📊 No simulation status available')
@@ -1840,6 +1966,9 @@ export default {
         result.accuracy = accuracy
         
         console.log('📊 Vehicle result updated:', result)
+        
+        // Set journey as no longer running to show buttons again
+        this.isJourneyRunning = false
         
         try {
           await this.saveJourneyToDatabase(result)
@@ -2214,7 +2343,7 @@ export default {
       }
     }
   },
-  mounted() {
+  async mounted() {
     // Initialize viewport
     this.updateViewport()
     
@@ -2239,6 +2368,14 @@ export default {
     // Load recent journeys from database
     this.loadRecentJourneysFromDB()
     
+    // Clear any old finished vehicles to prevent showing stale data on page refresh
+    try {
+      await apiService.clearFinishedVehicles()
+      console.log('🧹 Cleared old finished vehicles on page load')
+    } catch (error) {
+      console.warn('⚠️ Could not clear finished vehicles:', error)
+    }
+    
     // Load vehicles immediately and start updates
     this.loadActiveVehicles()
     this.startVehicleUpdates()
@@ -2260,6 +2397,12 @@ export default {
     if (this.legendAutoFoldTimer) {
       clearTimeout(this.legendAutoFoldTimer)
       this.legendAutoFoldTimer = null
+    }
+    
+    // Clean up finished vehicle timer
+    if (this.finishedVehicleTimer) {
+      clearTimeout(this.finishedVehicleTimer)
+      this.finishedVehicleTimer = null
     }
     
     // Clean up intervals
