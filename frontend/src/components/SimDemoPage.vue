@@ -254,10 +254,143 @@
                     class="vehicle-marker"
                     opacity="0.8"
                   />
-                </g>
-              </svg>
+              </g>
+            </svg>
+
+            <!-- Desktop/Tablet Landscape Layout - Positioned 25% towards left -->
+            <div class="hidden sm:block absolute top-12 left-1/4 transform -translate-x-3/4 pointer-events-none z-10">
+              <div class="bg-white bg-opacity-95 rounded-xl shadow-xl p-4 text-center max-w-xs animate-fade-in">
+                <div class="text-2xl mb-2 animate-bounce">
+                  <span v-if="!startPoint">📍</span>
+                  <span v-else-if="!destinationPoint">🎯</span>
+                  <span v-else-if="!isJourneyRunning">🚀</span>
+                  <span v-else>🚗</span>
+                </div>
+                <h3 class="text-lg font-bold text-gray-800 mb-1">
+                  <span v-if="!startPoint">Set Starting Point</span>
+                  <span v-else-if="!destinationPoint">Set Destination</span>
+                  <span v-else-if="!isJourneyRunning">Ready to Start!</span>
+                  <span v-else>Journey in Progress</span>
+                </h3>
+                <p class="text-sm text-gray-600">
+                  {{ getInstructionText() }}
+                </p>
+              </div>
+            </div>
+            
+            <!-- Mobile/Tablet Portrait Layout - Top Left Corner -->
+            <div class="block sm:hidden absolute top-2 left-2 pointer-events-none z-10">
+              <div class="bg-white bg-opacity-95 rounded-md shadow-lg px-1.5 py-0.5 max-w-xs animate-fade-in">
+                <div class="flex items-center space-x-1">
+                  <span class="text-xs animate-bounce">
+                    <span v-if="!startPoint">📍</span>
+                    <span v-else-if="!destinationPoint">🎯</span>
+                    <span v-else-if="!isJourneyRunning">🚀</span>
+                    <span v-else>🚗</span>
+                  </span>
+                  <span class="text-xs font-medium text-gray-800">
+                    <span v-if="!startPoint">Set Start</span>
+                    <span v-else-if="!destinationPoint">Set Dest</span>
+                    <span v-else-if="!isJourneyRunning">Ready!</span>
+                    <span v-else>Running</span>
+                  </span>
+                  <span class="text-xs text-gray-600">
+                    {{ getInstructionText() }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Map Legend -->
+            <div v-if="showLegend" class="absolute top-2 left-2 sm:top-4 sm:left-4 bg-white bg-opacity-95 rounded-lg shadow-lg pointer-events-auto animate-fade-in hidden sm:block" style="max-width: 180px;">
+              <!-- Legend Header (Always Visible) -->
+              <div 
+                @click="toggleLegend"
+                class="flex items-center justify-between cursor-pointer hover:bg-gray-50 rounded-t-lg transition-colors"
+                :class="legendCollapsed ? 'p-2' : 'p-3'"
+              >
+                <h3 class="font-bold text-gray-800 flex items-center"
+                    :class="legendCollapsed ? 'text-xs' : 'text-sm'">
+                  <span :class="legendCollapsed ? 'mr-0.5' : 'mr-1'">🗺️</span>
+                  <span v-if="!legendCollapsed">Legend</span>
+                </h3>
+                <span class="text-gray-500 text-xs transform transition-transform" 
+                      :class="{ 'rotate-180': !legendCollapsed }">
+                  ▼
+                </span>
+              </div>
+              
+              <!-- Collapsible Content -->
+              <div v-if="!legendCollapsed" class="px-3 pb-3">
+                <!-- Roads Section -->
+                <div class="mb-3">
+                  <h4 class="text-xs font-semibold text-gray-700 mb-1">Roads</h4>
+                  <div class="space-y-1">
+                    <div class="flex items-center">
+                      <div class="w-4 h-0.5 bg-gray-600 mr-2"></div>
+                      <span class="text-xs text-gray-600">Regular</span>
+                    </div>
+                    <div class="flex items-center">
+                      <svg class="w-4 h-0.5 mr-2" viewBox="0 0 16 2">
+                        <line x1="0" y1="1" x2="16" y2="1" stroke="#1e40af" stroke-width="1" opacity="0.6" stroke-dasharray="2,2"/>
+                      </svg>
+                      <span class="text-xs text-gray-600">Expressways</span>
+                    </div>
+                    <div class="flex items-center">
+                      <div class="w-4 h-1 bg-green-500 mr-2"></div>
+                      <span class="text-xs text-gray-600">Route</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Markers Section -->
+                <div class="mb-3">
+                  <h4 class="text-xs font-semibold text-gray-700 mb-1">Markers</h4>
+                  <div class="space-y-1">
+                    <div class="flex items-center">
+                      <div class="w-3 h-3 bg-green-500 rounded-full mr-2 border border-white"></div>
+                      <span class="text-xs text-gray-600">Start (S)</span>
+                    </div>
+                    <div class="flex items-center">
+                      <div class="w-3 h-3 bg-red-500 rounded-full mr-2 border border-white"></div>
+                      <span class="text-xs text-gray-600">Dest (D)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Vehicles Section -->
+                <div class="mb-3">
+                  <h4 class="text-xs font-semibold text-gray-700 mb-1">Vehicles</h4>
+                  <div class="space-y-1">
+                    <div class="flex items-center">
+                      <div class="w-3 h-3 bg-blue-500 rounded-full mr-2 border border-black"></div>
+                      <span class="text-xs text-gray-600">Cars</span>
+                    </div>
+                    <div class="flex items-center">
+                      <div class="w-3 h-3 bg-orange-500 rounded-full mr-2 border border-black"></div>
+                      <span class="text-xs text-gray-600">Buses</span>
+                    </div>
+                    <div class="flex items-center">
+                      <div class="w-3 h-3 bg-green-500 rounded-full mr-2 border border-black"></div>
+                      <span class="text-xs text-gray-600">Trucks</span>
+                    </div>
+                    <div class="flex items-center">
+                      <svg class="w-3 h-3 mr-2" viewBox="0 0 12 12">
+                        <path d="M6 1l1.5 3L12 4.5l-2.5 2.5L11 11l-3-1.5L5 11l1-4L3 4.5l3.5-.5L6 1z" fill="#fbbf24" stroke="#000000" stroke-width="0.3"/>
+                      </svg>
+                      <span class="text-xs text-gray-600">Your Vehicle</span>
+                    </div>
+                    <div class="flex items-center">
+                      <div class="w-3 h-3 bg-white rounded-full mr-2 border border-black"></div>
+                      <span class="text-xs text-gray-600">Not Tracked</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
+        </div>
           
           <!-- Results Section - 20% -->
           <div class="results-section">
@@ -330,6 +463,11 @@ export default {
       // Vehicle management
       activeVehicles: [],
       vehicleUpdateInterval: null,
+      
+      // Legend visibility
+      showLegend: true,
+      legendCollapsed: false,
+      legendAutoFoldTimer: null,
       
       // Route data
       routePath: null,
@@ -875,6 +1013,47 @@ export default {
       }
     },
     
+    startLegendAutoFold() {
+      // Clear any existing timer
+      if (this.legendAutoFoldTimer) {
+        clearTimeout(this.legendAutoFoldTimer)
+      }
+      
+      // Set timer to collapse legend after 10 seconds
+      this.legendAutoFoldTimer = setTimeout(() => {
+        this.legendCollapsed = true
+        console.log('🕐 Legend auto-folded after 10 seconds')
+      }, 10000)
+    },
+    
+    resetLegendAutoFold() {
+      // Clear existing timer
+      if (this.legendAutoFoldTimer) {
+        clearTimeout(this.legendAutoFoldTimer)
+      }
+      
+      // Start new timer
+      this.startLegendAutoFold()
+    },
+    
+    toggleLegend() {
+      this.legendCollapsed = !this.legendCollapsed
+      
+      // Reset auto-fold timer when user manually toggles
+      this.resetLegendAutoFold()
+    },
+    
+    getInstructionText() {
+      if (!this.startPoint) {
+        return "Click on a road to set your starting location"
+      } else if (!this.destinationPoint) {
+        return "Click on a road to set your destination"
+      } else if (!this.isJourneyRunning) {
+        return "Click 'Start Journey' to begin the simulation"
+      } else {
+        return "Vehicle is traveling to destination..."
+      }
+    },
     
     // Ready for your methods
   },
@@ -899,6 +1078,9 @@ export default {
     // Load vehicles immediately and start updates
     this.loadActiveVehicles()
     this.startVehicleUpdates()
+    
+    // Start legend auto-fold timer
+    this.startLegendAutoFold()
   },
   beforeUnmount() {
     // Clean up listeners
@@ -908,6 +1090,12 @@ export default {
     
     if (this.resizeTimeout) {
       clearTimeout(this.resizeTimeout)
+    }
+    
+    // Clean up legend auto-fold timer
+    if (this.legendAutoFoldTimer) {
+      clearTimeout(this.legendAutoFoldTimer)
+      this.legendAutoFoldTimer = null
     }
     
     // Clean up intervals
@@ -1541,6 +1729,22 @@ html, body {
 button:focus {
   outline: 2px solid rgb(59 130 246);
   outline-offset: 2px;
+}
+
+/* Legend animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 /* ===== RESULTS SECTION (20%) ===== */
