@@ -258,8 +258,8 @@
             </svg>
 
             <!-- Desktop/Tablet Landscape Layout - Positioned 25% towards left -->
-            <div class="hidden sm:block absolute top-12 left-1/4 transform -translate-x-3/4 pointer-events-none z-10">
-              <div class="bg-white bg-opacity-95 rounded-xl shadow-xl p-4 text-center max-w-xs animate-fade-in">
+            <div class="hidden sm:block absolute top-4 left-1/4 transform -translate-x-2/3 pointer-events-none z-10 landscape-only">
+              <div class="bg-white bg-opacity-70 rounded-xl shadow-xl p-4 text-center max-w-xs animate-fade-in">
                 <div class="text-2xl mb-2 animate-bounce">
                   <span v-if="!startPoint">📍</span>
                   <span v-else-if="!destinationPoint">🎯</span>
@@ -277,32 +277,9 @@
                 </p>
               </div>
             </div>
-            
-            <!-- Mobile/Tablet Portrait Layout - Top Left Corner -->
-            <div class="block sm:hidden absolute top-2 left-2 pointer-events-none z-10">
-              <div class="bg-white bg-opacity-95 rounded-md shadow-lg px-1.5 py-0.5 max-w-xs animate-fade-in">
-                <div class="flex items-center space-x-1">
-                  <span class="text-xs animate-bounce">
-                    <span v-if="!startPoint">📍</span>
-                    <span v-else-if="!destinationPoint">🎯</span>
-                    <span v-else-if="!isJourneyRunning">🚀</span>
-                    <span v-else>🚗</span>
-                  </span>
-                  <span class="text-xs font-medium text-gray-800">
-                    <span v-if="!startPoint">Set Start</span>
-                    <span v-else-if="!destinationPoint">Set Dest</span>
-                    <span v-else-if="!isJourneyRunning">Ready!</span>
-                    <span v-else>Running</span>
-                  </span>
-                  <span class="text-xs text-gray-600">
-                    {{ getInstructionText() }}
-                  </span>
-                </div>
-              </div>
-            </div>
 
             <!-- Map Legend -->
-            <div v-if="showLegend" class="absolute top-2 left-2 sm:top-4 sm:left-4 bg-white bg-opacity-95 rounded-lg shadow-lg pointer-events-auto animate-fade-in hidden sm:block" style="max-width: 180px;">
+            <div v-if="showLegend" class="absolute top-2 left-2 sm:top-4 sm:left-4 bg-white bg-opacity-95 rounded-lg shadow-lg pointer-events-auto animate-fade-in hidden sm:block z-20" style="max-width: 180px;">
               <!-- Legend Header (Always Visible) -->
               <div 
                 @click="toggleLegend"
@@ -1045,11 +1022,11 @@ export default {
     
     getInstructionText() {
       if (!this.startPoint) {
-        return "Click on a road to set your starting location"
+        return "Click on a road"
       } else if (!this.destinationPoint) {
-        return "Click on a road to set your destination"
+        return "Click on a road"
       } else if (!this.isJourneyRunning) {
-        return "Click 'Start Journey' to begin the simulation"
+        return "Click 'Start Journey'"
       } else {
         return "Vehicle is traveling to destination..."
       }
@@ -1532,6 +1509,25 @@ html, body {
     display: block;
   }
 }
+
+/* Landscape-only overlay - hide in portrait mode */
+.landscape-only {
+  display: none;
+}
+
+@media (min-width: 640px) and (orientation: landscape) {
+  .landscape-only {
+    display: block;
+  }
+}
+
+/* Desktop always shows landscape overlay regardless of orientation */
+@media (min-width: 1024px) {
+  .landscape-only {
+    display: block;
+  }
+}
+
 
 /* Mobile and Tablets - Portrait only simulation */
 /* Show simulation layout on mobile and portrait tablets */
