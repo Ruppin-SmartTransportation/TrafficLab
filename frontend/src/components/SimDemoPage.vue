@@ -508,7 +508,7 @@
             </div>
 
             <!-- Map Legend -->
-            <div v-if="showLegend" class="absolute top-2 left-2 sm:top-4 sm:left-4 bg-white bg-opacity-95 rounded-lg shadow-lg pointer-events-auto animate-fade-in hidden sm:block z-20" style="max-width: 180px;">
+            <div v-if="showLegend" class="absolute top-2 left-2 sm:top-4 sm:left-4 bg-white bg-opacity-95 rounded-lg shadow-lg pointer-events-auto animate-fade-in hidden lg:block z-20" style="max-width: 180px;">
               <!-- Legend Header (Always Visible) -->
               <div 
                 @click="toggleLegend"
@@ -915,22 +915,25 @@
   }
 }
 
-/* Portrait mode adjustments */
+/* Portrait mode adjustments - Move to top left */
 @media (orientation: portrait) and (max-width: 1366px) {
   .simulation-time-display {
-    @apply text-sm px-3 py-1.5 top-2;
+    @apply text-sm px-3 py-1.5 top-2 left-2;
+    transform: none;
   }
 }
 
 @media (orientation: portrait) and (max-width: 1024px) {
   .simulation-time-display {
-    @apply text-xs px-2 py-1 top-1;
+    @apply text-xs px-2 py-1 top-1 left-1;
+    transform: none;
   }
 }
 
 @media (orientation: portrait) and (max-width: 768px) {
   .simulation-time-display {
-    @apply text-xs px-2 py-1 top-1;
+    @apply text-xs px-2 py-1 top-1 left-1;
+    transform: none;
   }
 }
 </style>
