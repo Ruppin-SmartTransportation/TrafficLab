@@ -61,7 +61,7 @@
                 :viewBox="svgViewBox" 
                 width="100%" 
                 height="100%" 
-                class="absolute inset-0 cursor-crosshair map-container touch-none" 
+                class="absolute inset-0 cursor-crosshair map-container" 
                 style="background: #f1f5f9;"
                 preserveAspectRatio="xMidYMid meet"
                 @mousemove="handleMouseMove"
@@ -88,6 +88,7 @@
                         :data-road-name="edge.id"
                         fill="none"
                         @click="handleEdgeClick(edge, $event)"
+                        @touchstart="handleEdgeClick(edge, $event)"
                       />
                       <!-- Fallback to line if path data is invalid -->
                       <line 
@@ -102,6 +103,7 @@
                         :class="getRoadClass(edge)"
                         :data-road-name="edge.id"
                         @click="handleEdgeClick(edge, $event)"
+                        @touchstart="handleEdgeClick(edge, $event)"
                       />
                       <!-- Regular roads -->
                       <line 
@@ -116,6 +118,7 @@
                         :class="getRoadClass(edge)"
                         :data-road-name="edge.id"
                         @click="handleEdgeClick(edge, $event)"
+                        @touchstart="handleEdgeClick(edge, $event)"
                       />
                       
                       <!-- Invisible clickable areas for easier selection -->
@@ -128,6 +131,7 @@
                         :class="getRoadClass(edge)"
                         :data-road-name="edge.id"
                         @click="handleEdgeClick(edge, $event)"
+                        @touchstart="handleEdgeClick(edge, $event)"
                       />
                       <!-- Fallback invisible clickable line -->
                       <line 
@@ -141,6 +145,7 @@
                         :class="getRoadClass(edge)"
                         :data-road-name="edge.id"
                         @click="handleEdgeClick(edge, $event)"
+                        @touchstart="handleEdgeClick(edge, $event)"
                       />
                       <line 
                         v-else
@@ -153,6 +158,7 @@
                         :class="getRoadClass(edge)"
                         :data-road-name="edge.id"
                         @click="handleEdgeClick(edge, $event)"
+                        @touchstart="handleEdgeClick(edge, $event)"
                       />
                     </template>
                   </template>
@@ -243,17 +249,23 @@
                     class="vehicle-marker"
                     opacity="0.8"
                   />
-                  <!-- User-defined vehicles (yellow stars) -->
-                  <path 
+                  <!-- User-defined vehicles (sports car image) -->
+                  <g 
                     v-for="vehicle in activeVehicles.filter(v => !isNaN(v.x) && !isNaN(v.y) && v.type === 'user_defined')"
                     :key="vehicle.id"
-                    :d="getStarPath(vehicle.x, vehicle.y, 108)"
-                    :fill="getVehicleColor(vehicle.type, vehicle.status)"
-                    stroke="#000000"
-                    stroke-width="9"
+                    :transform="getVehicleTransform(vehicle)"
                     class="vehicle-marker"
                     opacity="0.8"
-                  />
+                  >
+                    <image 
+                      :x="-216" 
+                      :y="-108" 
+                      width="432" 
+                      height="216" 
+                      href="/images/car.png"
+                      preserveAspectRatio="xMidYMid meet"
+                    />
+                  </g>
               </g>
             </svg>
 
@@ -366,6 +378,30 @@
 
               </div>
             </div>
+
+            <!-- Control Buttons - Top Right Overlay -->
+            <div class="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 pointer-events-auto">
+              <div class="flex flex-col items-stretch gap-1 sm:gap-2 sm:flex-row sm:items-center">
+                <!-- Start Journey Button - Show when both points are set -->
+                <button 
+                  v-if="startPoint && destinationPoint"
+                  @click="handleMainButtonClick()"
+                  :class="getMainButtonClass()"
+                  class="text-white px-2 py-1 sm:px-4 sm:py-2 rounded-md sm:rounded-lg font-semibold transition duration-300 text-xs sm:text-sm shadow-lg"
+                >
+                  {{ getMainButtonText() }}
+                </button>
+                
+                <!-- Reset Points Button - Show when points are selected but journey not running -->
+                <button 
+                  v-if="startPoint && !isJourneyRunning"
+                  @click="resetPoints"
+                  class="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-md sm:rounded-lg font-semibold transition duration-300 text-xs sm:text-sm shadow-lg"
+                >
+                  🔄 Reset Points
+                </button>
+              </div>
+            </div>
           </div>
         </div>
           
@@ -445,6 +481,10 @@ export default {
       showLegend: true,
       legendCollapsed: false,
       legendAutoFoldTimer: null,
+      
+      // Results tracking
+      vehicleResults: [], // Array of vehicle journey results
+      maxResults: 20, // Maximum number of results to keep
       
       // Route data
       routePath: null,
@@ -673,33 +713,18 @@ export default {
         case 'truck':
           return '#10b981'  // Green
         case 'user_defined':
-          return '#fbbf24'  // Yellow
+          return '#dc2626'  // Red
         default:
           return '#6b7280'  // Gray
       }
     },
     
-    getStarPath(x, y, size) {
-      const points = 5
-      const outerRadius = size / 2
-      const innerRadius = outerRadius * 0.4
-      let path = ''
-      
-      for (let i = 0; i < points * 2; i++) {
-        const angle = (i * Math.PI) / points
-        const radius = i % 2 === 0 ? outerRadius : innerRadius
-        const px = x + Math.cos(angle) * radius
-        const py = y + Math.sin(angle) * radius
-        
-        if (i === 0) {
-          path += `M ${px} ${py}`
-        } else {
-          path += ` L ${px} ${py}`
-        }
-      }
-      path += ' Z'
-      return path
+
+    getVehicleTransform(vehicle) {
+      // Simple positioning - no rotation
+      return `translate(${vehicle.x}, ${vehicle.y})`
     },
+
     
     handleMapClick(event) {
       // Only show overlay if simulation is running and clicking on empty SVG area
@@ -760,7 +785,7 @@ export default {
         const clickEvent = {
           clientX: touch.clientX,
           clientY: touch.clientY,
-          target: event.target
+          target: svg
         }
         
         this.handleMapClick(clickEvent)
@@ -768,6 +793,14 @@ export default {
     },
     
     handleEdgeClick(edge, event) {
+      console.log('🔍 handleEdgeClick called:', {
+        edgeId: edge.id,
+        eventType: event.type,
+        isSimulationPlaying: this.isSimulationPlaying,
+        isJourneyRunning: this.isJourneyRunning
+      })
+      
+      event.preventDefault()
       event.stopPropagation()
       
       if (this.isSimulationPlaying || this.isJourneyRunning) {
@@ -818,6 +851,7 @@ export default {
       console.log('🛣️ Calculating route from', this.startPoint.id, 'to', this.destinationPoint.id)
       
       try {
+        // Calculate route between edges
         const routeResponse = await apiService.calculateRouteByEdges(
           this.startPoint.id, 
           this.destinationPoint.id
@@ -825,20 +859,25 @@ export default {
         
         if (routeResponse.error) {
           console.error('❌ Route calculation failed:', routeResponse.error)
+          alert(`Route calculation failed: ${routeResponse.error}`)
           return
         }
         
         console.log('✅ Route calculated:', routeResponse)
         
+        // Store the route for display
         this.routeEdges = routeResponse.edges
         this.routeDistance = routeResponse.distance
         this.routeDuration = routeResponse.duration
+        
+        // Generate SVG path for the route
         this.routePath = this.generateRoutePath(this.routeEdges)
         
-        console.log('🟢 Route displayed on map')
+        console.log('🟢 Route displayed on map - Edges:', this.routeEdges.join(', '))
         
       } catch (error) {
         console.error('❌ Error calculating route:', error)
+        alert('Failed to calculate route. Please try again.')
       }
     },
     
@@ -887,54 +926,260 @@ export default {
     },
     
     handleMainButtonClick() {
-      if (this.isJourneyRunning) {
-        this.stopJourney()
-      } else {
-        this.startJourney()
-      }
+      this.startJourney()
     },
     
     getMainButtonClass() {
-      return this.isJourneyRunning 
-        ? 'bg-red-600 hover:bg-red-700' 
-        : 'bg-blue-600 hover:bg-blue-700'
+      return 'bg-blue-600 hover:bg-blue-700'
     },
     
     getMainButtonText() {
-      return this.isJourneyRunning ? '⏹️ Stop Journey' : '▶️ Start Journey'
+      return '▶️ Start Journey'
     },
     
     async startJourney() {
       if (!this.startPoint || !this.destinationPoint) return
       
-      console.log('🚀 Starting journey')
-      this.isJourneyRunning = true
+      console.log('🚀 Starting journey from', this.startPoint, 'to', this.destinationPoint)
       
       try {
+        // Ensure route is calculated before starting journey
+        if (!this.routeEdges || !Array.isArray(this.routeEdges)) {
+          console.log('🔄 Route not calculated yet, calculating now...')
+          await this.calculateAndDisplayRoute()
+          
+          // Check if route calculation was successful
+          if (!this.routeEdges || !Array.isArray(this.routeEdges)) {
+            console.error('❌ Route calculation failed')
+            alert('Failed to calculate route. Please try selecting different points.')
+            return
+          }
+        }
+        
+        console.log('🛣️ Route edges available:', this.routeEdges)
+        
+        // Convert Proxy array to plain JavaScript array
+        const routeEdgesArray = Array.from(this.routeEdges)
+        console.log('🛣️ Route edges array:', routeEdgesArray)
+        
+        // Call the regular API to add vehicle to simulation
+        console.log('🚀 Calling apiService.startJourney with:', {
+          startEdge: this.startPoint.id,
+          endEdge: this.destinationPoint.id,
+          routeEdges: routeEdgesArray,
+          routeEdgesType: typeof routeEdgesArray,
+          routeEdgesLength: routeEdgesArray.length,
+          routeEdgesIsArray: Array.isArray(routeEdgesArray)
+        })
+        
         const response = await apiService.startJourney(
           this.startPoint.id,
+          this.destinationPoint.id,
+          routeEdgesArray
+        )
+        
+        console.log('✅ Journey started:', response)
+        
+        // Add vehicle result to local tracking
+        this.addVehicleResult(
+          response.vehicle_id, 
+          response.start_time, 
+          response.start_time_string, 
+          response.distance, 
+          response.predicted_eta,
+          this.startPoint.id,
+          this.destinationPoint.id,
+          routeEdgesArray
+        )
+        
+        // Start simulation with additional vehicle
+          this.startSimulationPlayback()
+        this.isJourneyRunning = true
+        
+        console.log('🚗 Vehicle added to simulation with route')
+      } catch (error) {
+        console.error('❌ Error starting journey:', error)
+        
+        // Try to get more detailed error information
+        let errorMessage = 'Failed to start journey. Please try again.'
+        if (error.response) {
+          // Server responded with error status
+          console.error('Server error response:', error.response.data)
+          errorMessage = `Server error: ${error.response.status} - ${error.response.data?.detail || error.response.data?.message || 'Unknown error'}`
+        } else if (error.request) {
+          // Request was made but no response received
+          console.error('No response received:', error.request)
+          errorMessage = 'No response from server. Please check if the backend is running.'
+        } else {
+          // Something else happened
+          console.error('Request setup error:', error.message)
+          errorMessage = `Request error: ${error.message}`
+        }
+        
+        alert(errorMessage)
+      }
+    },
+
+    async calculateAndDisplayRoute() {
+      if (!this.startPoint || !this.destinationPoint) return
+      
+      console.log('🛣️ Calculating route from', this.startPoint.id, 'to', this.destinationPoint.id)
+      
+      try {
+        // Calculate route between edges
+        const routeResponse = await apiService.calculateRouteByEdges(
+          this.startPoint.id, 
           this.destinationPoint.id
         )
         
-        if (response.success) {
-          console.log('✅ Journey started successfully')
-          this.startSimulationPlayback()
-        } else {
-          console.error('❌ Failed to start journey:', response.error)
-          this.isJourneyRunning = false
+        if (routeResponse.error) {
+          console.error('❌ Route calculation failed:', routeResponse.error)
+          alert(`Route calculation failed: ${routeResponse.error}`)
+          return
         }
+        
+        console.log('✅ Route calculated:', routeResponse)
+        
+        // Store the route for display
+        this.routeEdges = routeResponse.edges
+        this.routeDistance = routeResponse.distance
+        this.routeDuration = routeResponse.duration
+        
+        // Generate SVG path for the route
+        this.routePath = this.generateRoutePath(this.routeEdges)
+        
+        console.log('🟢 Route displayed on map - Edges:', this.routeEdges.join(', '))
+        
       } catch (error) {
-        console.error('❌ Error starting journey:', error)
-        this.isJourneyRunning = false
+        console.error('❌ Error calculating route:', error)
+        alert('Failed to calculate route. Please try again.')
       }
     },
-    
-    stopJourney() {
-      console.log('⏹️ Stopping journey')
-      this.isJourneyRunning = false
-      this.stopSimulationPlayback()
-      this.resetPoints()
+
+    generateRoutePath(routeEdges) {
+      if (!routeEdges || routeEdges.length < 2) return ''
+      
+      try {
+        let pathData = ''
+        
+        // Start from S marker to beginning of second edge
+        if (routeEdges.length >= 2) {
+          const firstEdge = this.networkData?.edges?.find(e => e.id === routeEdges[0])
+          const secondEdge = this.networkData?.edges?.find(e => e.id === routeEdges[1])
+          
+          if (firstEdge && secondEdge) {
+            // Start at S marker (center of first edge)
+            const startPoint = this.getEdgeCenterPoint(firstEdge)
+            pathData = `M ${startPoint[0]} ${startPoint[1]}`
+            
+            // Go to the junction that connects to the second edge
+            const firstEdgeEndJunction = this.getJunctionPosition(firstEdge.to_junction)
+            if (firstEdgeEndJunction) {
+              pathData += ` L ${firstEdgeEndJunction.x} ${firstEdgeEndJunction.y}`
+            }
+          }
+        }
+        
+        // Paint intermediate edges (skip first and last)
+        for (let i = 1; i < routeEdges.length - 1; i++) {
+          const edgeId = routeEdges[i]
+          const edge = this.networkData?.edges?.find(e => e.id === edgeId)
+          if (!edge) continue
+          
+          // Paint the full edge shape
+          if (edge.shape_points && edge.shape_points.length > 0) {
+            for (const point of edge.shape_points) {
+              pathData += ` L ${point[0]} ${point[1]}`
+            }
+        } else {
+            // For edges without shape points, connect the junctions
+            const startJunction = this.getJunctionPosition(edge.from_junction)
+            const endJunction = this.getJunctionPosition(edge.to_junction)
+            if (startJunction && endJunction) {
+              pathData += ` L ${startJunction.x} ${startJunction.y}`
+              pathData += ` L ${endJunction.x} ${endJunction.y}`
+            }
+          }
+        }
+        
+        // Paint from end of second-to-last edge to D marker
+        if (routeEdges.length >= 2) {
+          const secondToLastEdge = this.networkData?.edges?.find(e => e.id === routeEdges[routeEdges.length - 2])
+          const lastEdge = this.networkData?.edges?.find(e => e.id === routeEdges[routeEdges.length - 1])
+          
+          if (secondToLastEdge && lastEdge) {
+            // Go to the junction that connects to the last edge
+            const secondToLastEndJunction = this.getJunctionPosition(secondToLastEdge.to_junction)
+            if (secondToLastEndJunction) {
+              pathData += ` L ${secondToLastEndJunction.x} ${secondToLastEndJunction.y}`
+            }
+            
+            // Go to D marker (center of last edge)
+            const endPoint = this.getEdgeCenterPoint(lastEdge)
+            pathData += ` L ${endPoint[0]} ${endPoint[1]}`
+          }
+        }
+        
+        console.log('🛣️ Generated route path:', pathData)
+        return pathData
+        
+      } catch (error) {
+        console.error('❌ Error generating route path:', error)
+        return ''
+      }
     },
+
+    getEdgeCenterPoint(edge) {
+      if (edge.shape_points && edge.shape_points.length > 0) {
+        // For express edges with shape points, use the middle of the shape
+        const midIndex = Math.floor(edge.shape_points.length / 2)
+        if (edge.shape_points.length % 2 === 0 && midIndex > 0) {
+          const point1 = edge.shape_points[midIndex - 1]
+          const point2 = edge.shape_points[midIndex]
+          return [(point1[0] + point2[0]) / 2, (point1[1] + point2[1]) / 2]
+        } else {
+          return [edge.shape_points[midIndex][0], edge.shape_points[midIndex][1]]
+        }
+      } else {
+        // For regular edges, use the midpoint between junctions
+        const fromJunction = this.getJunctionPosition(edge.from_junction)
+        const toJunction = this.getJunctionPosition(edge.to_junction)
+        if (fromJunction && toJunction) {
+          return [(fromJunction.x + toJunction.x) / 2, (fromJunction.y + toJunction.y) / 2]
+        }
+        return [0, 0] // Fallback
+      }
+    },
+
+    addVehicleResult(vehicleId, startTime, startTimeString, distance, predictedEta, startEdge = null, endEdge = null, routeEdges = null) {
+      const result = {
+        vehicle_id: vehicleId,
+        start_time: startTime,
+        start_time_string: startTimeString,
+        distance: distance,
+        predicted_eta: predictedEta,
+        start_edge: startEdge,
+        end_edge: endEdge,
+        route_edges: routeEdges,
+        status: 'running',
+        end_time: null,
+        end_time_string: null,
+        actual_duration: null,
+        absolute_error: null,
+        accuracy: null
+      }
+      
+      // Add to beginning of array (most recent first)
+      this.vehicleResults.unshift(result)
+      
+      // Keep only maxResults
+      if (this.vehicleResults.length > this.maxResults) {
+        this.vehicleResults = this.vehicleResults.slice(0, this.maxResults)
+      }
+      
+      console.log('📊 Vehicle result added:', result)
+    },
+    
     
     startSimulationPlayback() {
       this.isSimulationPlaying = true
@@ -1028,7 +1273,7 @@ export default {
       } else if (!this.isJourneyRunning) {
         return "Click 'Start Journey'"
       } else {
-        return "Vehicle is traveling to destination..."
+        return "Traveling to destination..."
       }
     },
     
@@ -1471,8 +1716,8 @@ html, body {
   box-sizing: border-box;
 }
 
-/* Portrait layout for mobile and tablets */
-@media (max-width: 1023px) and (orientation: portrait) {
+/* Portrait layout for mobile, tablets, and iPad Pro */
+@media (orientation: portrait) and (max-width: 1366px) {
   .content-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -1604,6 +1849,51 @@ html, body {
 .road-path {
   pointer-events: stroke;
   transition: all 0.2s ease;
+}
+
+/* Ensure touch events work on mobile and tablets */
+@media (max-width: 1366px) {
+  .road-path,
+  path[data-road-name],
+  line[data-road-name] {
+    pointer-events: all;
+    touch-action: manipulation;
+  }
+}
+
+/* Force vertical stacking in portrait mode */
+@media (orientation: portrait) {
+  .absolute.top-2.right-2 > div {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+}
+
+/* Responsive button sizing for different screen sizes */
+@media (max-width: 480px) {
+  .absolute.top-2.right-2 {
+    top: 0.25rem;
+    right: 0.25rem;
+  }
+  
+  .absolute.top-2.right-2 button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.625rem;
+    border-radius: 0.25rem;
+  }
+}
+
+@media (max-width: 320px) {
+  .absolute.top-2.right-2 {
+    top: 0.125rem;
+    right: 0.125rem;
+  }
+  
+  .absolute.top-2.right-2 button {
+    padding: 0.125rem 0.25rem;
+    font-size: 0.5rem;
+    border-radius: 0.125rem;
+  }
 }
 
 .road-path.clickable {
