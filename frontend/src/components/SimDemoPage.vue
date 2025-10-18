@@ -42,9 +42,222 @@
         <div class="content-grid">
           <!-- Analysis Section - 20% -->
           <div class="analysis-section">
-            <div class="section-placeholder">
-              <h3>Analysis Section</h3>
-              <p>20% width</p>
+            <!-- Model Performance Analysis -->
+            <div class="bg-slate-900 bg-opacity-98 rounded-lg shadow-xl h-full overflow-hidden">
+              <!-- Statistics Header -->
+              <div class="flex items-center justify-between p-4 border-b border-slate-700 bg-slate-800">
+                <h3 class="text-sm font-semibold text-slate-100 flex items-center">
+                  <span class="mr-2 text-green-400">📈</span>
+                  Model Performance Analysis
+                </h3>
+              </div>
+              
+              <!-- Statistics Content -->
+              <div class="p-4 h-full overflow-y-auto hide-scrollbar scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
+                <!-- First Line: Basic Statistics -->
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                  <!-- Total Journeys -->
+                  <div class="bg-slate-700/50 rounded-lg p-2 text-center">
+                    <div class="text-xs text-slate-400 mb-1 font-medium">Total Journeys</div>
+                    <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.total_journeys || 0 }}</div>
+                  </div>
+                  
+                  <!-- Average Duration -->
+                  <div class="bg-slate-700/50 rounded-lg p-2 text-center">
+                    <div class="text-xs text-slate-400 mb-1 font-medium">Avg Duration</div>
+                    <div class="text-sm font-bold text-slate-100">{{ formatTime(journeyStatistics.average_duration || 0) }}</div>
+                  </div>
+                  
+                  <!-- Average Distance -->
+                  <div class="bg-slate-700/50 rounded-lg p-2 text-center">
+                    <div class="text-xs text-slate-400 mb-1 font-medium">Avg Distance</div>
+                    <div class="text-sm font-bold text-slate-100">{{ ((journeyStatistics.average_distance || 0) / 1000).toFixed(1) }}km</div>
+                  </div>
+                </div>
+                
+                <!-- Second Line: Prediction Accuracy Metrics -->
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                  <!-- MAE -->
+                  <div class="bg-slate-700/50 rounded-lg p-2 text-center">
+                    <div class="text-xs text-slate-400 mb-1 font-medium">MAE</div>
+                    <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.mae || 0 }}s</div>
+                  </div>
+                  
+                  <!-- RMSE -->
+                  <div class="bg-slate-700/50 rounded-lg p-2 text-center">
+                    <div class="text-xs text-slate-400 mb-1 font-medium">RMSE</div>
+                    <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.rmse || 0 }}s</div>
+                  </div>
+                  
+                  <!-- MAPE -->
+                  <div class="bg-slate-700/50 rounded-lg p-2 text-center">
+                    <div class="text-xs text-slate-400 mb-1 font-medium">MAPE</div>
+                    <div class="text-sm font-bold text-slate-100">{{ (journeyStatistics.mape || 0).toFixed(1) }}%</div>
+                  </div>
+                </div>
+                
+                <!-- Separating Line -->
+                <div class="border-t border-slate-600 mb-4"></div>
+                
+                <!-- Third Line: MAE by trip duration -->
+                <div class="mb-3">
+                  <div class="text-xs text-slate-400 mb-2 font-medium text-center">MAE by trip duration</div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <!-- Short Trips -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Duration: less than 278 seconds">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">Short</div>
+                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.short_trips?.mae || 0 }}s</div>
+                      <div class="text-xs text-slate-400">{{ journeyStatistics.short_trips?.count || 0 }}</div>
+                    </div>
+                    
+                    <!-- Medium Trips -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Duration: 278 to 609 seconds">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">Medium</div>
+                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.medium_trips?.mae || 0 }}s</div>
+                      <div class="text-xs text-slate-400">{{ journeyStatistics.medium_trips?.count || 0 }}</div>
+                    </div>
+                    
+                    <!-- Long Trips -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Duration: more than 609 seconds">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">Long</div>
+                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.long_trips?.mae || 0 }}s</div>
+                      <div class="text-xs text-slate-400">{{ journeyStatistics.long_trips?.count || 0 }}</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Separating Line -->
+                <div class="border-t border-slate-600 mb-4"></div>
+                
+                <!-- Fourth Line: MAE by trip distance -->
+                <div class="mb-3">
+                  <div class="text-xs text-slate-400 mb-2 font-medium text-center">MAE by trip distance</div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <!-- Short Distance -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Distance: less than 4 kilometers">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">Short</div>
+                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.short_trips_distance?.mae || 0 }}s</div>
+                      <div class="text-xs text-slate-400">{{ journeyStatistics.short_trips_distance?.count || 0 }}</div>
+                    </div>
+                    
+                    <!-- Medium Distance -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Distance: 4 to 11 kilometers">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">Medium</div>
+                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.medium_trips_distance?.mae || 0 }}s</div>
+                      <div class="text-xs text-slate-400">{{ journeyStatistics.medium_trips_distance?.count || 0 }}</div>
+                    </div>
+                    
+                    <!-- Long Distance -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-help" title="Distance: more than 11 kilometers">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">Long</div>
+                      <div class="text-sm font-bold text-slate-100">{{ journeyStatistics.long_trips_distance?.mae || 0 }}s</div>
+                      <div class="text-xs text-slate-400">{{ journeyStatistics.long_trips_distance?.count || 0 }}</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Separating Line -->
+                <div class="border-t border-slate-600 mb-4"></div>
+                
+                <!-- Fourth Section: Visual Analysis -->
+                <div class="mb-3">
+                  <div class="text-xs text-slate-400 mb-2 font-medium text-center">Visual Analysis</div>
+                  
+                  <!-- First Line: Scatter Plots and Time Analysis -->
+                  <div class="grid grid-cols-3 gap-2 mb-3">
+                    <!-- Trip Duration vs MAE Scatter Plot -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                         @click="openPlotWindow('duration-vs-mae-scatter')">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">Trip Duration vs MAE</div>
+                      <div class="text-xs text-slate-300">Scatter Plot</div>
+                      <div class="text-xs text-slate-500 mt-1">📊</div>
+                    </div>
+                    
+                    <!-- Trip Distance vs MAE Scatter Plot -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                         @click="openPlotWindow('distance-vs-mae-scatter')">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">Trip Distance vs MAE</div>
+                      <div class="text-xs text-slate-300">Scatter Plot</div>
+                      <div class="text-xs text-slate-500 mt-1">📊</div>
+                    </div>
+                    
+                    <!-- MAE by Time of Day -->
+                    <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                         @click="openPlotWindow('mae-by-time')">
+                      <div class="text-xs text-slate-400 mb-1 font-medium">MAE by Time of Day</div>
+                      <div class="text-xs text-slate-300">Bar Chart</div>
+                      <div class="text-xs text-slate-500 mt-1">📊</div>
+                    </div>
+                  </div>
+                  
+                  <!-- Second Line: Trip Duration vs MAE Histograms -->
+                  <div class="mb-2">
+                    <div class="text-xs text-slate-400 mb-2 font-medium text-center">Trip Duration vs MAE Histogram</div>
+                    <div class="grid grid-cols-3 gap-2">
+                      <!-- Short Trips Duration Histogram -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                           @click="openPlotWindow('duration-histogram-short')">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">Short</div>
+                        <div class="text-xs text-slate-300">Duration</div>
+                        <div class="text-xs text-slate-500 mt-1">📊</div>
+                      </div>
+                      
+                      <!-- Medium Trips Duration Histogram -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                           @click="openPlotWindow('duration-histogram-medium')">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">Medium</div>
+                        <div class="text-xs text-slate-300">Duration</div>
+                        <div class="text-xs text-slate-500 mt-1">📊</div>
+                      </div>
+                      
+                      <!-- Long Trips Duration Histogram -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                           @click="openPlotWindow('duration-histogram-long')">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">Long</div>
+                        <div class="text-xs text-slate-300">Duration</div>
+                        <div class="text-xs text-slate-500 mt-1">📊</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Third Line: Trip Distance vs MAE Histograms -->
+                  <div class="mb-3">
+                    <div class="text-xs text-slate-400 mb-2 font-medium text-center">Trip Distance vs MAE Histogram</div>
+                    <div class="grid grid-cols-3 gap-2">
+                      <!-- Short Trips Distance Histogram -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                           @click="openPlotWindow('distance-histogram-short')">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">Short</div>
+                        <div class="text-xs text-slate-300">Distance</div>
+                        <div class="text-xs text-slate-500 mt-1">📊</div>
+                      </div>
+                      
+                      <!-- Medium Trips Distance Histogram -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                           @click="openPlotWindow('distance-histogram-medium')">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">Medium</div>
+                        <div class="text-xs text-slate-300">Distance</div>
+                        <div class="text-xs text-slate-500 mt-1">📊</div>
+                      </div>
+                      
+                      <!-- Long Trips Distance Histogram -->
+                      <div class="bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:bg-slate-600/50 transition-colors" 
+                           @click="openPlotWindow('distance-histogram-long')">
+                        <div class="text-xs text-slate-400 mb-1 font-medium">Long</div>
+                        <div class="text-xs text-slate-300">Distance</div>
+                        <div class="text-xs text-slate-500 mt-1">📊</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Additional Statistics Placeholder -->
+                <div class="text-center text-slate-400 text-xs py-4">
+                  <div class="text-2xl mb-2">📈</div>
+                  <div class="font-medium">More analytics coming soon</div>
+                  <div class="text-xs mt-1">Advanced performance metrics will be added here</div>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -416,6 +629,67 @@
       </div>
     </div>
 
+    <!-- Plot Modal -->
+    <div v-if="showPlotModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="closePlotModal">
+      <div class="bg-slate-800 rounded-lg p-6 max-w-7xl w-full mx-4 max-h-[95vh] overflow-hidden" @click.stop>
+        <!-- Modal Header -->
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-2xl font-semibold text-slate-100">
+            {{ currentPlotType === 'duration-vs-mae-scatter' ? 'Trip Duration vs MAE Scatter Plot' : 
+               currentPlotType === 'distance-vs-mae-scatter' ? 'Trip Distance vs MAE Scatter Plot' : 
+               currentPlotType === 'mae-by-time' ? 'MAE by Time of Day' : 
+               currentPlotType === 'duration-histogram-short' ? 'Short Trips - Duration vs MAE Histogram' :
+               currentPlotType === 'duration-histogram-medium' ? 'Medium Trips - Duration vs MAE Histogram' :
+               currentPlotType === 'duration-histogram-long' ? 'Long Trips - Duration vs MAE Histogram' :
+               currentPlotType === 'distance-histogram-short' ? 'Short Trips - Distance vs MAE Histogram' :
+               currentPlotType === 'distance-histogram-medium' ? 'Medium Trips - Distance vs MAE Histogram' :
+               currentPlotType === 'distance-histogram-long' ? 'Long Trips - Distance vs MAE Histogram' :
+               currentPlotData?.title || 'Plot' }}
+          </h3>
+          <button 
+            @click="closePlotModal"
+            class="text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Plot Content -->
+        <div v-if="currentPlotData && (currentPlotType === 'duration-vs-mae-scatter' || currentPlotType === 'distance-vs-mae-scatter' || currentPlotType === 'mae-by-time' || currentPlotType === 'duration-histogram-short' || currentPlotType === 'duration-histogram-medium' || currentPlotType === 'duration-histogram-long' || currentPlotType === 'distance-histogram-short' || currentPlotType === 'distance-histogram-medium' || currentPlotType === 'distance-histogram-long')" class="space-y-2">
+          <!-- Matplotlib Plot Image -->
+          <div class="bg-slate-900 rounded-lg p-1">
+            <div v-if="plotImage" class="w-full h-[calc(95vh-120px)] flex items-center justify-center">
+              <img 
+                :src="plotImage" 
+                :alt="currentPlotType === 'duration-vs-mae-scatter' ? 'Trip Duration vs MAE Scatter Plot' : 
+                       currentPlotType === 'distance-vs-mae-scatter' ? 'Trip Distance vs MAE Scatter Plot' : 
+                       currentPlotType === 'mae-by-time' ? 'MAE by Time of Day Bar Chart' :
+                       currentPlotType === 'duration-histogram-short' ? 'Short Trips - Duration vs MAE Histogram' :
+                       currentPlotType === 'duration-histogram-medium' ? 'Medium Trips - Duration vs MAE Histogram' :
+                       currentPlotType === 'duration-histogram-long' ? 'Long Trips - Duration vs MAE Histogram' :
+                       currentPlotType === 'distance-histogram-short' ? 'Short Trips - Distance vs MAE Histogram' :
+                       currentPlotType === 'distance-histogram-medium' ? 'Medium Trips - Distance vs MAE Histogram' :
+                       currentPlotType === 'distance-histogram-long' ? 'Long Trips - Distance vs MAE Histogram' :
+                       'Plot'"
+                class="max-w-full max-h-full object-contain"
+              />
+            </div>
+            
+            <div v-else class="text-center text-slate-500 py-8">
+              No plot image available
+            </div>
+          </div>
+        </div>
+        
+        <!-- Placeholder for other plot types -->
+        <div v-else class="text-center text-slate-400 py-8">
+          Plot type not implemented yet
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -485,6 +759,50 @@ export default {
       // Results tracking
       vehicleResults: [], // Array of vehicle journey results
       maxResults: 20, // Maximum number of results to keep
+      
+      // Statistics data
+      journeyStatistics: {
+        total_journeys: 0,
+        average_duration: 0,
+        average_distance: 0,
+        mae: 0,
+        rmse: 0,
+        mape: 0,
+        short_trips: {
+          mae: 0,
+          count: 0
+        },
+        medium_trips: {
+          mae: 0,
+          count: 0
+        },
+        long_trips: {
+          mae: 0,
+          count: 0
+        },
+        short_trips_distance: {
+          mae: 0,
+          count: 0
+        },
+        medium_trips_distance: {
+          mae: 0,
+          count: 0
+        },
+        long_trips_distance: {
+          mae: 0,
+          count: 0
+        }
+      },
+      
+      // Plot modal data
+      showPlotModal: false,
+      currentPlotData: null,
+      currentPlotType: null,
+      chartInstance: null,
+      chartLoading: false,
+      showFallbackTable: false,
+      resizeHandler: null,
+      plotImage: null,
       
       // Route data
       routePath: null,
@@ -1277,7 +1595,256 @@ export default {
       }
     },
     
-    // Ready for your methods
+    async loadSimulationStatus() {
+      try {
+        console.log('🔄 Loading simulation status...')
+        const response = await apiService.getSimulationStatus()
+        
+        if (response) {
+          this.simulationStatus = response
+          console.log('✅ Simulation status loaded:', this.simulationStatus)
+        } else {
+          console.log('📊 No simulation status available')
+          this.simulationStatus = {
+            vehicles: 0,
+            vehicles_in_route: 0,
+            trips_added: 0,
+            current_step: 0
+          }
+        }
+      } catch (error) {
+        console.error('❌ Failed to load simulation status:', error)
+        this.simulationStatus = {
+          vehicles: 0,
+          vehicles_in_route: 0,
+          trips_added: 0,
+          current_step: 0
+        }
+      }
+    },
+    
+    async loadJourneyStatistics() {
+      try {
+        console.log('📊 Loading journey statistics...')
+        const response = await apiService.getJourneyStatistics()
+        
+        if (response.success && response.statistics) {
+          this.journeyStatistics = response.statistics
+          console.log('✅ Journey statistics loaded:', this.journeyStatistics)
+        } else {
+          console.log('📊 No statistics available')
+          this.journeyStatistics = {
+            total_journeys: 0,
+            average_duration: 0,
+            average_distance: 0,
+            mae: 0,
+            rmse: 0,
+            mape: 0,
+            short_trips: { mae: 0, count: 0 },
+            medium_trips: { mae: 0, count: 0 },
+            long_trips: { mae: 0, count: 0 },
+            short_trips_distance: { mae: 0, count: 0 },
+            medium_trips_distance: { mae: 0, count: 0 },
+            long_trips_distance: { mae: 0, count: 0 }
+          }
+        }
+      } catch (error) {
+        console.error('❌ Failed to load journey statistics:', error)
+        this.journeyStatistics = {
+          total_journeys: 0,
+          average_duration: 0,
+          average_distance: 0,
+          mae: 0,
+          rmse: 0,
+          mape: 0,
+          short_trips: { mae: 0, count: 0 },
+          medium_trips: { mae: 0, count: 0 },
+          long_trips: { mae: 0, count: 0 },
+          short_trips_distance: { mae: 0, count: 0 },
+          medium_trips_distance: { mae: 0, count: 0 },
+          long_trips_distance: { mae: 0, count: 0 }
+        }
+      }
+    },
+    
+    async updateVehicleResult(vehicleId, endTime, actualDuration, predictedDuration) {
+      const result = this.vehicleResults.find(r => r.vehicle_id === vehicleId)
+      if (result) {
+        result.status = 'finished'
+        result.end_time = endTime
+        result.end_time_string = this.formatTime(endTime)
+        result.actual_duration = actualDuration
+        
+        const absoluteError = Math.abs(predictedDuration - actualDuration)
+        const accuracy = actualDuration > 0 ? Math.max(0, 100 - (absoluteError / actualDuration) * 100) : 0
+        
+        result.absolute_error = absoluteError
+        result.accuracy = accuracy
+        
+        console.log('📊 Vehicle result updated:', result)
+        
+        try {
+          await this.saveJourneyToDatabase(result)
+          await this.loadJourneyStatistics()
+        } catch (error) {
+          console.error('❌ Error saving journey to database:', error)
+        }
+      } else {
+        console.warn('⚠️ Vehicle result not found for vehicle ID:', vehicleId)
+      }
+    },
+    
+    async saveJourneyToDatabase(journeyResult) {
+      try {
+        const journeyData = {
+          vehicle_id: journeyResult.vehicle_id,
+          start_edge: journeyResult.start_edge || 'unknown',
+          end_edge: journeyResult.end_edge || 'unknown',
+          route_edges: journeyResult.route_edges || [],
+          start_time: journeyResult.start_time,
+          start_time_string: journeyResult.start_time_string,
+          end_time: journeyResult.end_time,
+          end_time_string: journeyResult.end_time_string,
+          distance: journeyResult.distance,
+          predicted_eta: journeyResult.predicted_eta,
+          actual_duration: journeyResult.actual_duration,
+          absolute_error: journeyResult.absolute_error,
+          accuracy: journeyResult.accuracy,
+          status: journeyResult.status
+        }
+        
+        console.log('💾 Saving journey to database:', journeyData)
+        const response = await apiService.saveJourney(journeyData)
+        console.log('✅ Journey saved to database:', response)
+        return response
+      } catch (error) {
+        console.error('❌ Error saving journey to database:', error)
+        throw error
+      }
+    },
+    
+    async openPlotWindow(plotType) {
+      console.log('📊 Opening plot window for:', plotType)
+      this.currentPlotType = plotType
+      
+      try {
+        if (plotType === 'duration-vs-mae-scatter') {
+          const response = await apiService.getDurationVsMaePlotImage()
+          if (response.success) {
+            this.plotImage = response.image
+            this.currentPlotData = { total_points: response.total_points }
+            this.showPlotModal = true
+          } else {
+            console.error('Failed to load plot image:', response)
+            alert('Failed to load plot image. Please try again.')
+          }
+        } else if (plotType === 'distance-vs-mae-scatter') {
+          const response = await apiService.getDistanceVsMaePlotImage()
+          if (response.success) {
+            this.plotImage = response.image
+            this.currentPlotData = { total_points: response.total_points }
+            this.showPlotModal = true
+          } else {
+            console.error('Failed to load plot image:', response)
+            alert('Failed to load plot image. Please try again.')
+          }
+        } else if (plotType === 'mae-by-time') {
+          const response = await apiService.getMaeByTimePlotImage()
+          if (response.success) {
+            this.plotImage = response.image
+            this.currentPlotData = { total_points: response.total_points }
+            this.showPlotModal = true
+          } else {
+            console.error('Failed to load plot image:', response)
+            alert('Failed to load plot image. Please try again.')
+          }
+        } else if (plotType === 'duration-histogram-short' || plotType === 'duration-histogram-medium' || plotType === 'duration-histogram-long') {
+          const category = plotType.split('-')[2]
+          const response = await apiService.getDurationHistogramPlotImage(category)
+          if (response.success) {
+            this.plotImage = response.image
+            this.currentPlotData = { total_points: response.total_points, total_journeys: response.total_journeys }
+            this.showPlotModal = true
+          } else {
+            console.error('Failed to load plot image:', response)
+            alert('Failed to load plot image. Please try again.')
+          }
+        } else if (plotType === 'distance-histogram-short' || plotType === 'distance-histogram-medium' || plotType === 'distance-histogram-long') {
+          const category = plotType.split('-')[2]
+          const response = await apiService.getDistanceHistogramPlotImage(category)
+          if (response.success) {
+            this.plotImage = response.image
+            this.currentPlotData = { total_points: response.total_points, total_journeys: response.total_journeys }
+            this.showPlotModal = true
+          } else {
+            console.error('Failed to load plot image:', response)
+            alert('Failed to load plot image. Please try again.')
+          }
+        }
+      } catch (error) {
+        console.error('Error loading plot data:', error)
+        alert('Error loading plot data. Please try again.')
+      }
+    },
+    
+    closePlotModal() {
+      this.showPlotModal = false
+      this.currentPlotData = null
+      this.currentPlotType = null
+      this.showFallbackTable = false
+      this.plotImage = null
+      if (this.chartInstance && window.Plotly) {
+        try {
+          window.Plotly.purge(this.chartInstance)
+        } catch (error) {
+          console.warn('Error purging Plotly chart:', error)
+        }
+        this.chartInstance = null
+      }
+      
+      if (this.resizeHandler) {
+        window.removeEventListener('resize', this.resizeHandler)
+        this.resizeHandler = null
+      }
+    },
+    
+    formatTime(seconds) {
+      let totalSeconds = seconds
+      
+      if (typeof seconds === 'string') {
+        const parts = seconds.split(':')
+        if (parts.length >= 3) {
+          const hours = parseInt(parts[0]) || 0
+          const minutes = parseInt(parts[1]) || 0
+          const secs = parseInt(parts[2]) || 0
+          totalSeconds = hours * 3600 + minutes * 60 + secs
+        } else {
+          totalSeconds = 0
+        }
+      }
+      
+      if (isNaN(totalSeconds) || totalSeconds < 0) {
+        totalSeconds = 0
+      }
+      
+      const hours = Math.floor(totalSeconds / 3600)
+      const minutes = Math.floor((totalSeconds % 3600) / 60)
+      const secs = Math.floor(totalSeconds % 60)
+      
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    },
+    
+    getInstructionText() {
+      if (!this.startPoint) {
+        return 'Click on any road to set your starting point'
+      } else if (!this.destinationPoint) {
+        return 'Click on another road to set your destination'
+      } else if (!this.isJourneyRunning) {
+        return 'Click "Start Journey" to begin your trip'
+      } else {
+        return 'Your journey is in progress. Watch the vehicle move!'
+      }
+    }
   },
   mounted() {
     // Initialize viewport
@@ -1296,6 +1863,10 @@ export default {
     
     // Load network data for the map
     this.loadNetworkData()
+    
+    // Load simulation status and journey statistics
+    this.loadSimulationStatus()
+    this.loadJourneyStatistics()
     
     // Load vehicles immediately and start updates
     this.loadActiveVehicles()
@@ -1323,6 +1894,21 @@ export default {
     // Clean up intervals
     this.stopVehicleUpdates()
     this.stopSimulationPlayback()
+    
+    // Clean up chart instance
+    if (this.chartInstance && window.Plotly) {
+      try {
+        window.Plotly.purge(this.chartInstance)
+      } catch (error) {
+        console.warn('Error purging Plotly chart:', error)
+      }
+      this.chartInstance = null
+    }
+    
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler)
+      this.resizeHandler = null
+    }
   }
 }
 </script>
