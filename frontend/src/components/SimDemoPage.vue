@@ -2602,6 +2602,14 @@ html, body {
   position: relative;
 }
 
+/* Portrait mode - Allow scrolling */
+@media (orientation: portrait) and (max-width: 1366px) {
+  .main-content {
+    overflow-y: auto;
+    height: 100vh;
+  }
+}
+
 /* ===== LANDSCAPE MESSAGE (Desktop/Landscape) ===== */
 .landscape-message {
   display: none;
@@ -2676,27 +2684,46 @@ html, body {
 /* Portrait layout for mobile, tablets, and iPad Pro */
 @media (orientation: portrait) and (max-width: 1366px) {
   .content-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-template-rows: 40% 30% 30%;
+    display: flex;
+    flex-direction: column;
     gap: 0.25rem;
-    height: 100%;
+    min-height: 150vh; /* Allow content to extend beyond viewport for larger results section */
     width: 100%;
     padding: 0.25rem;
     box-sizing: border-box;
   }
   
   /* Reorder sections for portrait */
-  .analysis-section {
-    order: 2;
-  }
-  
   .map-section {
     order: 1;
+    position: relative;
+    z-index: 1;
+    background-color: #dbeafe !important;
+    border: 2px solid #1d4ed8 !important;
+    height: 40vh;
+    min-height: 300px;
+  }
+  
+  .analysis-section {
+    order: 2;
+    position: relative;
+    z-index: 1;
+    overflow-y: auto;
+    background-color: #f3f4f6 !important;
+    border: 2px solid #3b82f6 !important;
+    height: 60vh;
+    min-height: 400px;
   }
   
   .results-section {
     order: 3;
+    position: relative;
+    z-index: 1;
+    overflow-y: auto;
+    background-color: #f0fdf4 !important;
+    border: 2px solid #22c55e !important;
+    height: 50vh;
+    min-height: 400px;
   }
 }
 
@@ -2773,6 +2800,23 @@ html, body {
   padding: 0.25rem;
   overflow-y: auto;
   box-sizing: border-box;
+}
+
+/* Portrait mode - Make analysis section much taller */
+@media (orientation: portrait) and (max-width: 1366px) {
+  .analysis-section {
+    min-height: 70vh; /* Much taller in portrait mode */
+    max-height: 80vh; /* Prevent it from being too tall */
+    position: relative;
+    z-index: 2;
+    overflow-y: auto;
+  }
+  
+  /* Make results section much taller in portrait mode */
+  .results-section {
+    min-height: 60vh; /* Much taller for results */
+    max-height: 70vh; /* Prevent it from being too tall */
+  }
 }
 
 /* ===== MAP SECTION (60%) ===== */
