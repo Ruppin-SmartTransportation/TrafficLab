@@ -598,7 +598,16 @@
 
             <!-- Control Buttons - Top Right Overlay -->
             <div class="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 pointer-events-auto">
-              <div class="flex flex-col items-stretch gap-1 sm:gap-2 sm:flex-row sm:items-center">
+              <div class="flex flex-col items-stretch gap-1 sm:gap-2">
+                <!-- Reset Points Button - Show when points are selected but journey not running -->
+                <button 
+                  v-if="startPoint && !isJourneyRunning"
+                  @click="resetPoints"
+                  class="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-md sm:rounded-lg font-semibold transition duration-300 text-xs sm:text-sm shadow-lg"
+                >
+                  🔄 Reset Points
+                </button>
+                
                 <!-- Start Journey Button - Show when both points are set but journey not running -->
                 <button 
                   v-if="startPoint && destinationPoint && !isJourneyRunning"
@@ -607,15 +616,6 @@
                   class="text-white px-2 py-1 sm:px-4 sm:py-2 rounded-md sm:rounded-lg font-semibold transition duration-300 text-xs sm:text-sm shadow-lg"
                 >
                   {{ getMainButtonText() }}
-                </button>
-                
-                <!-- Reset Points Button - Show when points are selected but journey not running -->
-                <button 
-                  v-if="startPoint && !isJourneyRunning"
-                  @click="resetPoints"
-                  class="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-md sm:rounded-lg font-semibold transition duration-300 text-xs sm:text-sm shadow-lg"
-                >
-                  🔄 Reset Points
                 </button>
               </div>
             </div>
@@ -3072,12 +3072,10 @@ html, body {
   }
 }
 
-/* Force vertical stacking in portrait mode */
-@media (orientation: portrait) {
-  .absolute.top-2.right-2 > div {
-    flex-direction: column !important;
-    align-items: stretch !important;
-  }
+/* Control buttons always stack vertically */
+.absolute.top-2.right-2 > div {
+  flex-direction: column !important;
+  align-items: stretch !important;
 }
 
 /* Responsive button sizing for different screen sizes */
