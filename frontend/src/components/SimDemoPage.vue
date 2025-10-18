@@ -620,9 +620,166 @@
           
           <!-- Results Section - 20% -->
           <div class="results-section">
-            <div class="section-placeholder">
-              <h3>Results Section</h3>
-              <p>20% width</p>
+            <!-- Results Summary Section -->
+            <div class="bg-slate-900 bg-opacity-98 rounded-lg shadow-xl h-full overflow-hidden">
+              <!-- Results Header -->
+              <div class="flex items-center justify-between p-4 border-b border-slate-700 bg-slate-800">
+                <h3 class="text-sm font-semibold text-slate-100 flex items-center">
+                  <span class="mr-2 text-blue-400">📊</span>
+                  Recent Journeys
+                </h3>
+              </div>
+              
+              <!-- Results Content -->
+              <div class="p-4 h-full overflow-y-auto hide-scrollbar scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
+                <div v-if="vehicleResults.length === 0" class="text-center text-slate-400 text-sm py-8">
+                  <div class="text-4xl mb-3">🚗</div>
+                  <div class="font-medium">No journeys started yet</div>
+                  <div class="text-xs mt-1">Click on roads to set start and destination points</div>
+                </div>
+                
+                <div v-else class="space-y-1 sm:space-y-1.5">
+                  <div v-for="(result, index) in vehicleResults" :key="result.vehicle_id" 
+                       class="border border-slate-600 rounded-lg p-1.5 sm:p-2 bg-slate-800 hover:bg-slate-750 transition-all duration-200 hover:shadow-lg hover:border-slate-500 will-change-transform"
+                       :class="{ 'opacity-50': result.status === 'running' && !isSimulationPlaying }">
+                    <!-- Status Header -->
+                    <div class="flex items-center justify-between mb-1 sm:mb-2">
+                      <div class="flex items-center space-x-1 sm:space-x-2">
+                        <span class="text-xs sm:text-xs font-medium text-slate-300">Journey #{{ totalJourneyCount - index }}</span>
+                      </div>
+                      <span class="text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium flex items-center space-x-1"
+                            :class="result.status === 'finished' ? 'bg-emerald-600 text-emerald-100' : 'bg-blue-600 text-blue-100'">
+                        <span v-if="result.status === 'finished'">✓</span>
+                        <span class="font-mono text-xs">{{ result.status === 'finished' ? 'Completed' : 'Running' }}</span>
+                        <span v-if="result.status === 'running'" class="ml-1 font-mono text-xs">
+                          {{ formatTime(Math.max(0, simulationTime - result.start_time)) }}
+                        </span>
+                      </span>
+                    </div>
+                    
+                    <!-- Top Section: Start and Distance -->
+                    <div class="grid grid-cols-2 gap-1 sm:gap-1.5 mb-1 sm:mb-2">
+                      <!-- Start Time -->
+                      <div class="bg-slate-700/50 rounded p-1 sm:p-1.5">
+                        <div class="text-xs text-slate-400 mb-0.5 font-medium flex items-center">
+                          <span class="mr-0.5 sm:mr-1">🕐</span>
+                          <span class="hidden sm:inline">Start</span>
+                        </div>
+                        <div class="text-xs font-mono text-slate-100">
+                          {{ result.start_time_string ? formatTimeWithDay(result.start_time_string) : formatTimeWithDay(result.start_time) }}
+                        </div>
+                      </div>
+                      
+                      <!-- Distance -->
+                      <div class="bg-slate-700/50 rounded p-1 sm:p-1.5">
+                        <div class="text-xs text-slate-400 mb-0.5 font-medium flex items-center">
+                          <span class="mr-0.5 sm:mr-1">📏</span>
+                          <span class="hidden sm:inline">Distance</span>
+                        </div>
+                        <div class="text-xs font-mono text-slate-100">
+                          {{ (result.distance / 1000).toFixed(2) }}km
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Line Separator -->
+                    <div class="border-t border-slate-600 mb-1 sm:mb-2"></div>
+                    
+                    <!-- Middle Section: Prediction -->
+                    <div class="text-xs font-medium text-slate-300 mb-1 sm:mb-1.5 flex items-center">
+                      <span class="mr-0.5 sm:mr-1">🎯</span>
+                      <span class="hidden sm:inline">Prediction</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1 sm:gap-1.5 mb-1 sm:mb-2">
+                      <!-- ETA -->
+                      <div class="bg-slate-700/50 rounded p-1 sm:p-1.5">
+                        <div class="text-xs text-slate-400 mb-0.5 font-medium flex items-center">
+                          <span class="mr-0.5 sm:mr-1">🎯</span>
+                          <span class="hidden sm:inline">ETA</span>
+                        </div>
+                        <div class="text-xs font-mono text-slate-100">
+                          {{ formatTimeModulo24(result.predicted_eta) }}
+                        </div>
+                      </div>
+                      
+                      <!-- Estimated Duration -->
+                      <div class="bg-slate-700/50 rounded p-1 sm:p-1.5">
+                        <div class="text-xs text-slate-400 mb-0.5 font-medium flex items-center">
+                          <span class="mr-0.5 sm:mr-1">⏱️</span>
+                          <span class="hidden sm:inline">Est. Duration</span>
+                        </div>
+                        <div class="text-xs font-mono text-slate-100">
+                          {{ calculateDuration(result.start_time_string, formatTime(result.predicted_eta)) }}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Line Separator -->
+                    <div class="border-t border-slate-600 mb-1 sm:mb-2"></div>
+                    
+                    <!-- Results (only if finished) -->
+                    <div v-if="result.status === 'finished'" class="space-y-1 sm:space-y-1.5">
+                      <div class="text-xs font-medium text-slate-300 mb-1 sm:mb-1.5 flex items-center">
+                        <span class="mr-0.5 sm:mr-1">📊</span>
+                        <span class="hidden sm:inline">Results</span>
+                      </div>
+                      
+                      <!-- First Line: Arrival Time and Duration -->
+                      <div class="grid grid-cols-2 gap-1 sm:gap-1.5 mb-1 sm:mb-1.5">
+                        <!-- Arrival Time -->
+                        <div class="bg-slate-700/50 rounded p-1 sm:p-1.5">
+                          <div class="text-xs text-slate-400 mb-0.5 font-medium">
+                            <span class="hidden sm:inline">Arrival Time</span>
+                            <span class="sm:hidden">Arrival</span>
+                          </div>
+                          <div class="text-xs font-mono text-slate-100">
+                            {{ result.end_time_string ? formatTimeModulo24(result.end_time_string) : formatTimeModulo24(result.end_time) }}
+                          </div>
+                        </div>
+                        
+                        <!-- Duration -->
+                        <div class="bg-slate-700/50 rounded p-1 sm:p-1.5">
+                          <div class="text-xs text-slate-400 mb-0.5 font-medium">Duration</div>
+                          <div class="text-xs font-mono text-slate-100">
+                            {{ formatTime(result.actual_duration) }}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Second Line: Error and Accuracy -->
+                      <div class="grid grid-cols-2 gap-1 sm:gap-1.5">
+                        <!-- Absolute Error -->
+                        <div class="bg-slate-700/50 rounded p-1 sm:p-1.5">
+                          <div class="text-xs text-slate-400 mb-0.5 font-medium">Error</div>
+                          <div class="text-xs font-mono px-1 sm:px-1.5 py-0.5 rounded" 
+                               :class="calculateError(result) < 30 ? 'text-emerald-300 bg-emerald-900/30' : calculateError(result) < 60 ? 'text-yellow-300 bg-yellow-900/30' : 'text-red-300 bg-red-900/30'">
+                            {{ Math.round(calculateError(result)) }}s
+                          </div>
+                        </div>
+                        
+                        <!-- Accuracy -->
+                        <div class="bg-slate-700/50 rounded p-1 sm:p-1.5">
+                          <div class="text-xs text-slate-400 mb-0.5 font-medium">Accuracy</div>
+                          <div class="text-xs font-mono px-1 sm:px-1.5 py-0.5 rounded" 
+                               :class="calculateAccuracy(result) > 80 ? 'text-emerald-300 bg-emerald-900/30' : calculateAccuracy(result) > 60 ? 'text-yellow-300 bg-yellow-900/30' : 'text-red-300 bg-red-900/30'">
+                            {{ calculateAccuracy(result).toFixed(1) }}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Scroll to top button -->
+                  <div v-if="vehicleResults.length > 3" class="sticky bottom-0 pt-1 sm:pt-2">
+                    <button 
+                      @click="scrollToTop"
+                      class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-slate-100 py-1 sm:py-1.5 px-2 sm:px-3 rounded-lg text-xs font-medium transition-colors duration-200"
+                    >
+                      ↑ Scroll to Top
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -759,6 +916,7 @@ export default {
       // Results tracking
       vehicleResults: [], // Array of vehicle journey results
       maxResults: 20, // Maximum number of results to keep
+      totalJourneyCount: 0, // Total number of journeys in database
       
       // Statistics data
       journeyStatistics: {
@@ -1686,6 +1844,8 @@ export default {
         try {
           await this.saveJourneyToDatabase(result)
           await this.loadJourneyStatistics()
+          // Refresh recent journeys from database after saving
+          await this.loadRecentJourneysFromDB()
         } catch (error) {
           console.error('❌ Error saving journey to database:', error)
         }
@@ -1844,6 +2004,214 @@ export default {
       } else {
         return 'Your journey is in progress. Watch the vehicle move!'
       }
+    },
+
+    // Results section methods
+    async loadRecentJourneysFromDB() {
+      try {
+        console.log('📊 Loading recent journeys from database...')
+        const response = await apiService.getRecentJourneys(20)
+        
+        if (response.success && response.journeys) {
+          // Store total journey count
+          this.totalJourneyCount = response.total_count || 0
+          
+          // Transform database format to frontend format
+          this.vehicleResults = response.journeys.map(journey => ({
+            vehicle_id: journey.vehicle_id,
+            start_time: journey.start_time,
+            start_time_string: journey.start_time_string,
+            end_time: journey.end_time,
+            end_time_string: journey.end_time_string,
+            distance: journey.distance,
+            predicted_eta: journey.predicted_eta,
+            actual_duration: journey.actual_duration,
+            absolute_error: journey.absolute_error,
+            accuracy: journey.accuracy,
+            status: journey.status,
+            start_edge: journey.start_edge,
+            end_edge: journey.end_edge,
+            route_edges: journey.route_edges
+          }))
+          
+          console.log('✅ Recent journeys loaded from database:', this.vehicleResults.length, 'Total count:', this.totalJourneyCount)
+        } else {
+          console.log('📊 No journeys found in database')
+          this.vehicleResults = []
+        }
+      } catch (error) {
+        console.error('❌ Failed to load recent journeys from database:', error)
+        // Fallback to empty array on error
+        this.vehicleResults = []
+      }
+    },
+
+    scrollToTop() {
+      const resultsContainer = this.$el.querySelector('.overflow-y-auto')
+      if (resultsContainer) {
+        resultsContainer.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    },
+
+    formatTimeModulo24(seconds) {
+      // Handle both string and number inputs
+      let totalSeconds = seconds
+      
+      if (typeof seconds === 'string') {
+        // Parse string format "HH:MM:SS:MS" or "HH:MM:SS"
+        const parts = seconds.split(':')
+        if (parts.length >= 3) {
+          const hours = parseInt(parts[0]) || 0
+          const minutes = parseInt(parts[1]) || 0
+          const secs = parseInt(parts[2]) || 0
+          totalSeconds = hours * 3600 + minutes * 60 + secs
+        } else {
+          totalSeconds = 0
+        }
+      }
+      
+      // Ensure it's a valid number
+      if (isNaN(totalSeconds) || totalSeconds < 0) {
+        totalSeconds = 0
+      }
+      
+      // Apply modulo 24 to hours to show time in current day
+      const hours = Math.floor(totalSeconds / 3600) % 24
+      const minutes = Math.floor((totalSeconds % 3600) / 60)
+      const secs = Math.floor(totalSeconds % 60)
+      
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    },
+
+    formatTimeWithDay(seconds) {
+      // Handle both string and number inputs
+      let totalSeconds = seconds
+      
+      if (typeof seconds === 'string') {
+        // Parse string format "HH:MM:SS:MS" or "HH:MM:SS"
+        const parts = seconds.split(':')
+        if (parts.length >= 3) {
+          const hours = parseInt(parts[0]) || 0
+          const minutes = parseInt(parts[1]) || 0
+          const secs = parseInt(parts[2]) || 0
+          totalSeconds = hours * 3600 + minutes * 60 + secs
+        } else {
+          totalSeconds = 0
+        }
+      }
+      
+      // Ensure it's a valid number
+      if (isNaN(totalSeconds) || totalSeconds < 0) {
+        totalSeconds = 0
+      }
+      
+      // Calculate day of week (0 = Monday)
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      const dayIndex = Math.floor(totalSeconds / 86400) % 7  // 86400 seconds = 1 day
+      const day = days[dayIndex]
+      
+      // Calculate time within the day
+      const hours = Math.floor((totalSeconds % 86400) / 3600)
+      const minutes = Math.floor((totalSeconds % 3600) / 60)
+      const secs = Math.floor(totalSeconds % 60)
+      
+      return `${day} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    },
+
+    calculateDuration(startTimeString, endTimeString) {
+      try {
+        // Parse start time string (HH:MM:SS)
+        const startParts = startTimeString.split(':')
+        const startHours = parseInt(startParts[0]) || 0
+        const startMinutes = parseInt(startParts[1]) || 0
+        const startSeconds = parseInt(startParts[2]) || 0
+        const startTotalSeconds = startHours * 3600 + startMinutes * 60 + startSeconds
+        
+        // Parse end time string (HH:MM:SS)
+        const endParts = endTimeString.split(':')
+        const endHours = parseInt(endParts[0]) || 0
+        const endMinutes = parseInt(endParts[1]) || 0
+        const endSeconds = parseInt(endParts[2]) || 0
+        const endTotalSeconds = endHours * 3600 + endMinutes * 60 + endSeconds
+        
+        // Calculate duration
+        const durationSeconds = endTotalSeconds - startTotalSeconds
+        
+        // Format duration as HH:MM:SS
+        const hours = Math.floor(durationSeconds / 3600)
+        const minutes = Math.floor((durationSeconds % 3600) / 60)
+        const secs = durationSeconds % 60
+        
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+      } catch (error) {
+        console.error('Error calculating duration:', error)
+        return '00:00:00'
+      }
+    },
+
+    calculateError(result) {
+      try {
+        if (result.status !== 'finished') return 0
+        
+        // Calculate estimated duration from start time and ETA
+        const estimatedDuration = this.calculateDurationSeconds(result.start_time_string, this.formatTime(result.predicted_eta))
+        
+        // Calculate actual duration from start time and end time
+        const actualDuration = this.calculateDurationSeconds(result.start_time_string, result.end_time_string)
+        
+        // Return absolute difference in seconds
+        return Math.abs(estimatedDuration - actualDuration)
+      } catch (error) {
+        console.error('Error calculating error:', error)
+        return 0
+      }
+    },
+
+    calculateAccuracy(result) {
+      try {
+        if (result.status !== 'finished') return 0
+        
+        // Calculate estimated duration from start time and ETA
+        const estimatedDuration = this.calculateDurationSeconds(result.start_time_string, this.formatTime(result.predicted_eta))
+        
+        // Calculate actual duration from start time and end time
+        const actualDuration = this.calculateDurationSeconds(result.start_time_string, result.end_time_string)
+        
+        if (actualDuration === 0) return 0
+        
+        // Calculate error
+        const error = Math.abs(estimatedDuration - actualDuration)
+        
+        // Calculate accuracy as percentage
+        return Math.max(0, 100 - (error / actualDuration) * 100)
+      } catch (error) {
+        console.error('Error calculating accuracy:', error)
+        return 0
+      }
+    },
+
+    calculateDurationSeconds(startTimeString, endTimeString) {
+      try {
+        // Parse start time string (HH:MM:SS)
+        const startParts = startTimeString.split(':')
+        const startHours = parseInt(startParts[0]) || 0
+        const startMinutes = parseInt(startParts[1]) || 0
+        const startSeconds = parseInt(startParts[2]) || 0
+        const startTotalSeconds = startHours * 3600 + startMinutes * 60 + startSeconds
+        
+        // Parse end time string (HH:MM:SS)
+        const endParts = endTimeString.split(':')
+        const endHours = parseInt(endParts[0]) || 0
+        const endMinutes = parseInt(endParts[1]) || 0
+        const endSeconds = parseInt(endParts[2]) || 0
+        const endTotalSeconds = endHours * 3600 + endMinutes * 60 + endSeconds
+        
+        // Return duration in seconds
+        return endTotalSeconds - startTotalSeconds
+      } catch (error) {
+        console.error('Error calculating duration in seconds:', error)
+        return 0
+      }
     }
   },
   mounted() {
@@ -1867,6 +2235,9 @@ export default {
     // Load simulation status and journey statistics
     this.loadSimulationStatus()
     this.loadJourneyStatistics()
+    
+    // Load recent journeys from database
+    this.loadRecentJourneysFromDB()
     
     // Load vehicles immediately and start updates
     this.loadActiveVehicles()
