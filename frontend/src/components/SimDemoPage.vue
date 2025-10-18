@@ -268,6 +268,10 @@
               class="map-container"
               ref="mapContainer"
             >
+              <!-- Simulation Time Display - Floating above network -->
+              <div class="simulation-time-display">
+                {{ formatTimeWithDay(simulationTime) }}
+              </div>
               <!-- SUMO Network Visualization -->
               <svg 
                 ref="networkSvg"
@@ -870,6 +874,66 @@
 
   </div>
 </template>
+
+<style scoped>
+/* Simulation Time Display - Floating above network */
+.simulation-time-display {
+  @apply absolute top-4 left-1/2 transform -translate-x-1/2 z-10;
+  @apply bg-white bg-opacity-90 px-4 py-2 rounded-lg shadow-lg;
+  @apply text-2xl font-semibold text-gray-800 text-center;
+  @apply border border-gray-200;
+}
+
+/* Responsive font scaling based on screen resolution */
+@media (max-width: 1536px) {
+  .simulation-time-display {
+    @apply text-xl;
+  }
+}
+
+@media (max-width: 1280px) {
+  .simulation-time-display {
+    @apply text-lg;
+  }
+}
+
+@media (max-width: 1024px) {
+  .simulation-time-display {
+    @apply text-base;
+  }
+}
+
+@media (max-width: 768px) {
+  .simulation-time-display {
+    @apply text-sm px-3 py-1.5;
+  }
+}
+
+@media (max-width: 640px) {
+  .simulation-time-display {
+    @apply text-xs px-2 py-1;
+  }
+}
+
+/* Portrait mode adjustments */
+@media (orientation: portrait) and (max-width: 1366px) {
+  .simulation-time-display {
+    @apply text-sm px-3 py-1.5 top-2;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 1024px) {
+  .simulation-time-display {
+    @apply text-xs px-2 py-1 top-1;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 768px) {
+  .simulation-time-display {
+    @apply text-xs px-2 py-1 top-1;
+  }
+}
+</style>
 
 <script>
 import apiService from '../services/api.js'
@@ -1864,7 +1928,7 @@ export default {
     
     async loadSimulationStatus() {
       try {
-        console.log('🔄 Loading simulation status...')
+        // console.log('🔄 Loading simulation status...')
         const response = await apiService.getSimulationStatus()
         
         if (response) {
@@ -1886,7 +1950,7 @@ export default {
             this.simulationTime = response.simulation_time || 0
           }
           
-          console.log('✅ Simulation status loaded:', this.simulationStatus)
+          // console.log('✅ Simulation status loaded:', this.simulationStatus)
         } else {
           console.log('📊 No simulation status available')
           this.simulationStatus = {
