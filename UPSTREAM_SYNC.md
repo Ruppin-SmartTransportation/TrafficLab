@@ -4,6 +4,43 @@
 
 This repository has an automated workflow that keeps the fork synchronized with the upstream repository [Turgibot/TrafficLab](https://github.com/Turgibot/TrafficLab).
 
+## Workflow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Every 6 hours (or manual trigger)                          │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Job 1: sync-and-merge                                      │
+│  ─────────────────────────────────────────────────────────  │
+│  • Fetch upstream/master (Turgibot/TrafficLab)              │
+│  • Check if updates exist                                   │
+│  • Merge into fork's master                                 │
+│  • Create PR: master → feature/rm-nginx-to-use-traefik      │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Job 2: build-and-verify                                    │
+│  ─────────────────────────────────────────────────────────  │
+│  • Build frontend Docker image                              │
+│  • Build backend Docker image                               │
+│  • Build database Docker image                              │
+│  • Verify all builds succeed                                │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Job 3: auto-merge                                          │
+│  ─────────────────────────────────────────────────────────  │
+│  • Approve the PR                                           │
+│  • Merge PR into feature/rm-nginx-to-use-traefik            │
+│  • Close and cleanup                                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ## How It Works
 
 The workflow runs automatically every 6 hours and:
