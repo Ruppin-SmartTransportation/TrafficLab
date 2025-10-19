@@ -327,7 +327,7 @@ class SUMOSimulation:
             # Get vehicle position and zone information
             current_road = self.roads[route_edges[0]]
             if current_road:
-                current_junction_id = current_road.from_junction
+                current_junction_id = current_road.to_junction
                 current_junction = self.junctions[current_junction_id]
                 current_x, current_y = current_junction.x, current_junction.y   
             else:
@@ -912,7 +912,6 @@ class SUMOSimulation:
         for zone_id, zone in self.zones.items():
             print(f"  Zone {zone_id}: {len(zone.edges)} edges, {len(zone.junctions)} junctions, {len(zone.current_vehicles)} vehicles")
         
-        print(f"\n🗄️  Database session: Not using database")
         print("="*50)
     
     def add_journey_vehicle(self, start_edge, end_edge, route_edges):
