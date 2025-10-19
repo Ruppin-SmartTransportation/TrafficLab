@@ -12,26 +12,26 @@ help:
 # Stop and remove containers, networks, and orphaned containers
 down:
 	@echo "Stopping and removing containers..."
-	docker-compose down --remove-orphans
+	docker compose down --remove-orphans
 
 # Start services
 up:
 	@echo "Starting services..."
-	docker-compose up
+	docker compose up
 
 # Build and start services
 build:
 	@echo "Building and starting services..."
-	docker-compose up --build
+	docker compose up --build
 
 # Complete workflow: down, then up with build
 clean: down
 	@echo "Starting fresh with build..."
-	docker-compose up --build
+	docker compose up --build
 
 # Take down, remove orphans, and build with no cache
 cd: down
 	@echo "Building with no cache..."
-	docker-compose build --no-cache
-	@echo "Starting services..."
-	docker-compose up
+	docker compose build --no-cache
+	@echo "Starting services in detached mode..."
+	docker compose up -d
